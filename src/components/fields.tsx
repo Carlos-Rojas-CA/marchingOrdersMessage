@@ -1,4 +1,4 @@
-import { useId, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Check, MapPin } from 'lucide-react';
 import { searchPlaces, zoneLabel, type Place } from '../lib/model/timezones';
 import { cn } from './ui';
@@ -111,6 +111,39 @@ export function PlaceField({
   const id = useId();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
+  const fieldRef = useRef<HTMLDivElement>(null);
+  const [dropUp, setDropUp] = useState(false);
+
+  /**
+   * Puts the list wherever there is actually room for it.
+   *
+   * The keyboard covers the bottom of the screen, and a list anchored below a
+   * field near the bottom opens straight behind it — the suggestions are
+   * there, and unreachable. visualViewport reports the space the keyboard has
+   * left, which is the only measurement that knows the keyboard exists.
+   */
+  useEffect(() => {
+    if (!open) return;
+
+    function place() {
+      const element = fieldRef.current;
+      if (!element) return;
+      const room = window.visualViewport?.height ?? window.innerHeight;
+      const box = element.getBoundingClientRect();
+      const LIST = 240;
+      setDropUp(room - box.bottom < LIST && box.top > LIST);
+    }
+
+    place();
+    // The keyboard animates in after focus, so the first measurement is taken
+    // before it exists; visualViewport reports the change when it arrives.
+    window.visualViewport?.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.visualViewport?.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [open]);
 
   const matches = useMemo(() => (open ? searchPlaces(query) : []), [query, open]);
 
@@ -128,7 +161,7 @@ export function PlaceField({
     typed.length > 1 && !matches.some((m) => m.name.toLowerCase() === typed.toLowerCase());
 
   return (
-    <div className="relative flex flex-col gap-1">
+    <div ref={fieldRef} className="relative flex flex-col gap-1">
       <label htmlFor={id} className="text-xs text-muted">
         {label}
       </label>
@@ -152,7 +185,12 @@ export function PlaceField({
           value={query}
           autoFocus={open}
           placeholder={placeholder}
-          onFocus={() => setOpen(true)}
+          onFocus={(event) => {
+            setOpen(true);
+            // Centres the field so the list has room on whichever side it
+            // ends up opening.
+            event.currentTarget.scrollIntoView({ block: 'center' });
+          }}
           onChange={(event) => {
             setQuery(event.target.value);
             setOpen(true);
@@ -166,7 +204,12 @@ export function PlaceField({
       )}
 
       {open && (matches.length > 0 || canUseTyped) ? (
-        <ul className="absolute top-full right-0 left-0 z-20 mt-1 max-h-60 overflow-y-auto rounded-xl border border-border bg-surface shadow-lg">
+        <ul
+          className={cn(
+            'absolute right-0 left-0 z-20 max-h-60 overflow-y-auto rounded-xl border border-border bg-surface shadow-lg',
+            dropUp ? 'bottom-full mb-1' : 'top-full mt-1',
+          )}
+        >
           {matches.map((place) => (
             <li key={`${place.timeZone}:${place.name}`}>
               <button

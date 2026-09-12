@@ -107,10 +107,23 @@
   --font-display: 'Archivo Variable', 'Barlow', ui-sans-serif, system-ui, sans-serif;
 }
 
+/*
+ * Dynamic viewport units, not percentages.
+ *
+ * `height: 100%` on iOS resolves against a box that stops short of the safe
+ * area, so a bar fixed to bottom:0 anchored above the physical bottom of the
+ * screen and the page background simply did not paint below it — a grey strip
+ * under the tab bar. dvh tracks the viewport as it actually is.
+ */
 html,
 body,
 #root {
-  height: 100%;
+  min-height: 100dvh;
+}
+
+/* Painted on html too, so an overscroll never reveals a different colour. */
+html {
+  background: var(--bg);
 }
 
 body {

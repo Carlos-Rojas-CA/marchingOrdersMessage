@@ -627,3 +627,31 @@ describe('finding your way to an activity', () => {
     expect(await screen.findByRole('heading', { name: 'Legs' })).toBeInTheDocument();
   });
 });
+
+describe('the suggestion list', () => {
+  test('opens below the field when there is room', async () => {
+    await renderAt(`/trip/${FOLDER}/item/new?type=lodging`);
+    const user = userEvent.setup();
+
+    await user.type(await screen.findByLabelText('City'), 'Naples');
+
+    // jsdom reports a zero-height viewport for everything, so this only pins
+    // the default side; the flip itself is measured against visualViewport at
+    // runtime and cannot be exercised without a layout engine.
+    const list = (await screen.findByRole('button', { name: /Naples/ })).closest('ul')!;
+    expect(list.className).toContain('top-full');
+  });
+
+  test('keeps the field reachable while the list is open', async () => {
+    await renderAt(`/trip/${FOLDER}/item/new?type=lodging`);
+    const user = userEvent.setup();
+
+    const field = await screen.findByLabelText('City');
+    await user.type(field, 'Naples');
+
+    // Selecting still works with the list open, which is the behaviour the
+    // keyboard was getting in the way of.
+    await user.click(await screen.findByRole('button', { name: /^Naples/ }));
+    expect(await screen.findByRole('button', { name: /Naples/ })).toBeInTheDocument();
+  });
+});
