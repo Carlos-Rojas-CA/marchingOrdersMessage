@@ -71,11 +71,16 @@ export function AccountBar() {
   }
 
   if (!state.account) {
+    // Trips held locally are readable without any Drive session at all, so
+    // "not signed in" beside a list of them needs to say which it means.
+    const saved = state.trips.length;
     return (
       <Card className="mb-4">
         <div className="flex items-center justify-between gap-3">
           <p className="min-w-0 flex-1 text-sm text-muted">
-            Not signed in. Creating a trip will sign you in to Google Drive.
+            {saved > 0
+              ? `Not connected to Drive. ${saved === 1 ? 'This trip is' : `These ${saved} trips are`} saved on this device and will open offline. Sign in to sync ${saved === 1 ? 'it' : 'them'}.`
+              : 'Not signed in. Creating a trip will sign you in to Google Drive.'}
           </p>
           <Button
             variant="ghost"

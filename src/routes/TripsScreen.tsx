@@ -21,10 +21,12 @@ export function TripsScreen() {
     // The account recorded locally renders immediately and costs nothing.
     void app.loadAccount();
 
-    // Confirming it with Drive is only attempted when a token is already in
-    // hand. Otherwise merely opening the app would trigger a sign-in popup —
-    // which browsers block anyway, since no click asked for it.
-    if (auth.hasValidToken()) void app.reconcileAccount();
+    // Then try to reuse an existing Google session, silently. This shows
+    // nothing if there is no session — only the interactive fallback could
+    // produce a popup, and nothing on page load is allowed to reach it.
+    void auth.primeSilently().then((signedIn) => {
+      if (signedIn) return app.reconcileAccount();
+    });
   }, [app, auth]);
 
   async function createTrip() {

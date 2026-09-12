@@ -80,6 +80,27 @@ export class GoogleAuth {
     this.#chooseAccount = true;
   }
 
+  /**
+   * Tries to reuse an existing Google session without showing anything.
+   *
+   * Runs on page load, where there is no click to justify a popup — and where
+   * a browser would block one anyway. Returns whether a token is now held, so
+   * the caller can decide what to do rather than being surprised by a dialog.
+   */
+  async primeSilently(): Promise<boolean> {
+    if (this.hasValidToken()) return true;
+    try {
+      const grant = await this.source.request({ silent: true });
+      this.#token = {
+        value: grant.accessToken,
+        expiresAt: this.now() + grant.expiresInSeconds * 1000,
+      };
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async getAccessToken(): Promise<string> {
     if (this.#token && this.hasValidToken()) return this.#token.value;
 

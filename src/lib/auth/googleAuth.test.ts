@@ -196,3 +196,40 @@ describe('signing out', () => {
     expect(auth.hasValidToken()).toBe(false);
   });
 });
+
+describe('priming a session on load', () => {
+  test('reports success when an existing Google session can be reused', async () => {
+    const auth = new GoogleAuth(sourceReturning(anHour));
+
+    expect(await auth.primeSilently()).toBe(true);
+    expect(auth.hasValidToken()).toBe(true);
+  });
+
+  test('reports failure instead of prompting when there is no session', async () => {
+    const request = vi.fn().mockRejectedValue(new Error('no active session'));
+    const auth = new GoogleAuth({ request });
+
+    expect(await auth.primeSilently()).toBe(false);
+  });
+
+  test('never falls back to an interactive prompt', async () => {
+    const request = vi.fn().mockRejectedValue(new Error('no active session'));
+    const auth = new GoogleAuth({ request });
+
+    await auth.primeSilently();
+
+    // This runs on page load, with no click behind it. A popup here would be
+    // both unasked for and blocked by the browser.
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(request).toHaveBeenCalledWith({ silent: true });
+  });
+
+  test('reuses a token already in hand without asking again', async () => {
+    const source = sourceReturning(anHour);
+    const auth = new GoogleAuth(source);
+    await auth.getAccessToken();
+
+    expect(await auth.primeSilently()).toBe(true);
+    expect(source.request).toHaveBeenCalledTimes(1);
+  });
+});
