@@ -62,7 +62,7 @@ describe('adding a flight', () => {
     const { itinerary } = await renderAt(`/trip/${FOLDER}/item/new?type=flight`);
     const user = userEvent.setup();
 
-    await user.type(await screen.findByLabelText('Flight or service number'), 'UA 123');
+    await user.type(await screen.findByLabelText('Flight number'), 'UA 123');
 
     await user.type(screen.getByLabelText('Departs from'), 'San Diego');
     await user.click(await screen.findByRole('button', { name: /San Diego/ }));
@@ -139,13 +139,15 @@ describe('the route sketch', () => {
     await user.click(await screen.findByRole('button', { name: /^Barcelona/ }));
 
     // One night each, running from the trip's first day.
-    expect(await screen.findByText(/Fri, May 8 – Sat, May 9/)).toBeInTheDocument();
-    expect(screen.getByText(/Sat, May 9 – Sun, May 10/)).toBeInTheDocument();
+    expect(await screen.findByLabelText('Arrive in Rome')).toHaveValue('2026-05-08');
+    expect(screen.getByLabelText('Arrive in Barcelona')).toHaveValue('2026-05-09');
 
     await user.click(screen.getByRole('button', { name: 'One night more in Rome' }));
 
     // Barcelona has to move with it — the whole point of entering nights.
-    expect(await screen.findByText(/Sun, May 10 – Mon, May 11/)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByLabelText('Arrive in Barcelona')).toHaveValue('2026-05-10'),
+    );
   });
 
   test('writes one stay per stop', async () => {
@@ -261,7 +263,7 @@ describe('entering a date without a time', () => {
     const { itinerary } = await renderAt(`/trip/${FOLDER}/item/new?type=flight`);
     const user = userEvent.setup();
 
-    await user.type(await screen.findByLabelText('Flight or service number'), 'UA 123');
+    await user.type(await screen.findByLabelText('Flight number'), 'UA 123');
     await user.type(screen.getByLabelText('Departure date'), '2026-05-17');
     await user.type(screen.getByLabelText('Arrival date'), '2026-05-18');
     await user.click(screen.getByRole('button', { name: 'Save' }));
@@ -313,7 +315,7 @@ describe('the route start', () => {
 
     // Trip starts on the 8th; the flight lands on the 9th, and that is the
     // first night anyone needs a bed.
-    expect(await screen.findByText(/Sat, May 9 – Sun, May 10/)).toBeInTheDocument();
+    expect(await screen.findByLabelText('Arrive in Rome')).toHaveValue('2026-05-09');
   });
 
   test('starts a place at one night, not an assumed three', async () => {
@@ -323,7 +325,7 @@ describe('the route start', () => {
     await user.type(await screen.findByLabelText('Add a place'), 'Rome');
     await user.click(await screen.findByRole('button', { name: /^Rome/ }));
 
-    expect(await screen.findByText(/1 night ·/)).toBeInTheDocument();
+    expect(await screen.findByText(/1 night · until/)).toBeInTheDocument();
   });
 
   test('lets the first day be corrected by hand', async () => {
@@ -339,7 +341,9 @@ describe('the route start', () => {
     });
 
     // Everything downstream moves with it, same as changing a night count.
-    expect(await screen.findByText(/Mon, May 11 – Tue, May 12/)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByLabelText('Arrive in Rome')).toHaveValue('2026-05-11'),
+    );
   });
 });
 
@@ -366,5 +370,100 @@ describe('answering a transition gap', () => {
       'href',
       expect.stringContaining('date=2026-05-13'),
     );
+  });
+});
+
+describe('answering a gap actually silences it', () => {
+  const twoCities = [
+    stay('Rome', '2026-05-08', '2026-05-13'),
+    stay('Barcelona', '2026-05-13', '2026-05-21', 'Europe/Madrid'),
+  ];
+
+  test('a date arriving from the link gets a time, so the travel is recorded', async () => {
+    const { itinerary } = await renderAt(
+      `/trip/${FOLDER}/item/new?type=flight&date=2026-05-13`,
+      twoCities,
+    );
+    const user = userEvent.setup();
+
+    await user.type(await screen.findByLabelText('Flight number'), 'VY6503');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(async () => {
+      const added = (await itinerary()).items.find(
+        (i: { title: string }) => i.title === 'VY6503',
+      );
+      // A prefilled date with no time recorded nothing at all, so the warning
+      // that sent you here stayed up after you answered it.
+      expect(added.startsAt).toMatch(/^2026-05-13T/);
+    });
+  });
+
+  test('shows the prefilled time rather than leaving the field blank', async () => {
+    await renderAt(`/trip/${FOLDER}/item/new?type=flight&date=2026-05-13`, twoCities);
+
+    expect(await screen.findByLabelText('Departure time')).toHaveValue('12:00');
+  });
+});
+
+describe('a trip whose middle is undecided', () => {
+  test('a place pinned to its own date leaves a hole before it', async () => {
+    await renderAt(`/trip/${FOLDER}/route`);
+    const user = userEvent.setup();
+
+    await user.type(await screen.findByLabelText('Add a place'), 'Rome');
+    await user.click(await screen.findByRole('button', { name: /^Rome/ }));
+    await user.type(await screen.findByLabelText('Add a place'), 'Berlin');
+    await user.click(await screen.findByRole('button', { name: /^Berlin/ }));
+
+    // Berlin is booked for the 18th; whatever happens in between is not
+    // decided yet, and the route must not invent a length for it.
+    fireEvent.change(screen.getByLabelText('Arrive in Berlin'), {
+      target: { value: '2026-05-18' },
+    });
+
+    await waitFor(() =>
+      expect(screen.getByLabelText('Arrive in Berlin')).toHaveValue('2026-05-18'),
+    );
+    // Rome stays exactly where it was.
+    expect(screen.getByLabelText('Arrive in Rome')).toHaveValue('2026-05-08');
+  });
+
+  test('says that a pinned place stays put', async () => {
+    await renderAt(`/trip/${FOLDER}/route`);
+    const user = userEvent.setup();
+
+    await user.type(await screen.findByLabelText('Add a place'), 'Rome');
+    await user.click(await screen.findByRole('button', { name: /^Rome/ }));
+    fireEvent.change(screen.getByLabelText('Arrive in Rome'), {
+      target: { value: '2026-05-12' },
+    });
+
+    expect(await screen.findByText(/still undecided/)).toBeInTheDocument();
+  });
+});
+
+describe('journey forms do not all read like a flight', () => {
+  test('a car asks where you are driving, not for a flight number', async () => {
+    await renderAt(`/trip/${FOLDER}/item/new?type=car`);
+
+    expect(await screen.findByLabelText('What is it?')).toBeInTheDocument();
+    expect(screen.getByLabelText('Driving from')).toBeInTheDocument();
+    expect(screen.getByLabelText('Driving to')).toBeInTheDocument();
+  });
+
+  test('a ferry sails rather than departing', async () => {
+    await renderAt(`/trip/${FOLDER}/item/new?type=ferry`);
+
+    expect(await screen.findByLabelText('Sails from')).toBeInTheDocument();
+    expect(screen.getByLabelText('Ferry or route')).toBeInTheDocument();
+  });
+
+  test('other travel keeps it plain', async () => {
+    await renderAt(`/trip/${FOLDER}/item/new?type=transit`);
+
+    expect(await screen.findByLabelText('From')).toBeInTheDocument();
+    expect(screen.getByLabelText('To')).toBeInTheDocument();
+    expect(screen.getByLabelText('Leaves date')).toBeInTheDocument();
   });
 });

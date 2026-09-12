@@ -68,6 +68,17 @@ export function RouteScreen() {
     setAdding(null);
   }
 
+  /**
+   * Pins a stop to a date rather than letting it follow the one before.
+   *
+   * How a half-planned trip gets recorded: when the middle of a route is
+   * undecided, the places either side of the hole are still known, and a
+   * strict chain would force a length to be invented for the gap.
+   */
+  function pinArrival(key: string, arrive: string) {
+    setStops((current) => current.map((s) => (s.key === key ? { ...s, arrive } : s)));
+  }
+
   function setNights(key: string, nights: number) {
     setStops((current) =>
       current.map((s) => (s.key === key ? { ...s, nights: Math.max(1, nights) } : s)),
@@ -172,9 +183,19 @@ export function RouteScreen() {
                     ) : null}
                   </p>
                   <p className="text-sm text-muted">
-                    {stop.nights} {stop.nights === 1 ? 'night' : 'nights'} ·{' '}
-                    {formatDayLabel(stop.arrive)} – {formatDayLabel(stop.depart)}
+                    {stop.nights} {stop.nights === 1 ? 'night' : 'nights'} · until{' '}
+                    {formatDayLabel(stop.depart)}
                   </p>
+                  <label className="sr-only" htmlFor={`arrive-${stops[index]!.key}`}>
+                    Arrive in {stop.place}
+                  </label>
+                  <input
+                    id={`arrive-${stops[index]!.key}`}
+                    type="date"
+                    value={stop.arrive}
+                    onChange={(event) => pinArrival(stops[index]!.key, event.target.value)}
+                    className="mt-1 min-h-9 rounded-lg border border-border bg-bg px-2 text-sm outline-none focus:border-accent"
+                  />
                 </div>
 
                 <div className="flex shrink-0 items-center gap-1">
@@ -212,6 +233,13 @@ export function RouteScreen() {
         </ul>
 
         <PlaceField label="Add a place" value={adding} onChange={(p) => p && addStop(p)} />
+
+        {stops.some((s) => s.arrive) ? (
+          <p className="text-sm text-muted">
+            A place with its own date stays put; the ones after it follow on.
+            That is how to record a trip whose middle is still undecided.
+          </p>
+        ) : null}
 
         {lastNight && doc?.endDate ? (
           <p

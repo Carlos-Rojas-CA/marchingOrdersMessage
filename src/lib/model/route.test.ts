@@ -114,6 +114,49 @@ describe('planRoute', () => {
   test('handles an empty route without inventing anything', () => {
     expect(planRoute('2026-05-09', [])).toEqual([]);
   });
+
+  test('lets a stop be pinned to its own date, leaving a hole before it', () => {
+    // A trip still being planned: the first and last places are booked and the
+    // middle is undecided. Chaining everything would either invent a length
+    // for the missing stop or refuse to record the one after it.
+    const plan = planRoute('2026-05-09', [
+      { place: 'Rome', nights: 2 },
+      { place: 'Berlin', nights: 3, arrive: '2026-05-18' },
+    ]);
+
+    expect(plan[0]).toMatchObject({ arrive: '2026-05-09', depart: '2026-05-11' });
+    expect(plan[1]).toMatchObject({ arrive: '2026-05-18', depart: '2026-05-21' });
+  });
+
+  test('carries on chaining from a pinned stop', () => {
+    const plan = planRoute('2026-05-09', [
+      { place: 'Rome', nights: 2 },
+      { place: 'Berlin', nights: 3, arrive: '2026-05-18' },
+      { place: 'Prague', nights: 2 },
+    ]);
+
+    expect(plan[2]).toMatchObject({ arrive: '2026-05-21', depart: '2026-05-23' });
+  });
+
+  test('a pinned first stop overrides where the route was told to start', () => {
+    const plan = planRoute('2026-05-09', [
+      { place: 'Rome', nights: 2, arrive: '2026-05-12' },
+    ]);
+
+    expect(plan[0]!.arrive).toBe('2026-05-12');
+  });
+
+  test('still cascades the stops that are not pinned', () => {
+    const plan = planRoute('2026-05-09', [
+      { place: 'Rome', nights: 2 },
+      { place: 'Florence', nights: 2 },
+      { place: 'Berlin', nights: 3, arrive: '2026-05-18' },
+    ]);
+
+    // Florence follows Rome; Berlin stays where it was put.
+    expect(plan[1]!.arrive).toBe('2026-05-11');
+    expect(plan[2]!.arrive).toBe('2026-05-18');
+  });
 });
 
 describe('legsFromStays', () => {

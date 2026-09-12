@@ -29,6 +29,14 @@ export interface RouteStop {
   country?: string;
   timeZone?: string;
   nights: number;
+  /**
+   * Pins this stop to a date instead of following the one before it.
+   *
+   * What makes a half-planned trip recordable: when the middle of a route is
+   * undecided, the places on either side of the hole are still known, and
+   * chaining would force a length to be invented for the gap.
+   */
+  arrive?: string;
 }
 
 export interface PlannedStop extends RouteStop {
@@ -49,8 +57,11 @@ export function planRoute(startDate: string, stops: RouteStop[]): PlannedStop[] 
   let cursor = startDate;
 
   for (const stop of stops) {
-    const depart = addDays(cursor, stop.nights);
-    planned.push({ ...stop, arrive: cursor, depart });
+    // A pinned stop starts where it says and the chain resumes from it; an
+    // unpinned one follows whatever came before.
+    const arrive = stop.arrive || cursor;
+    const depart = addDays(arrive, stop.nights);
+    planned.push({ ...stop, arrive, depart });
     // You leave one place on the day you reach the next; there is no day in
     // between to account for.
     cursor = depart;

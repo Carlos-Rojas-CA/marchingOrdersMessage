@@ -29,6 +29,54 @@ const TYPE_LABELS: Record<ItemType, string> = {
   document: 'Document',
 };
 
+/**
+ * What each kind of journey calls its own fields.
+ *
+ * Every journey shares a shape — leaves somewhere, arrives somewhere — but
+ * asking for a "flight number" when someone is recording a drive makes the
+ * form look like it was built for something else and is merely tolerating them.
+ */
+const JOURNEY_WORDS: Partial<
+  Record<ItemType, { name: string; placeholder: string; from: string; to: string }>
+> = {
+  flight: {
+    name: 'Flight number',
+    placeholder: 'UA 123',
+    from: 'Departs from',
+    to: 'Arrives at',
+  },
+  train: {
+    name: 'Train or service',
+    placeholder: 'Frecciarossa 9512',
+    from: 'Departs from',
+    to: 'Arrives at',
+  },
+  ferry: {
+    name: 'Ferry or route',
+    placeholder: 'Naples → Positano',
+    from: 'Sails from',
+    to: 'Arrives at',
+  },
+  bus: {
+    name: 'Bus or service',
+    placeholder: 'FlixBus 076',
+    from: 'Departs from',
+    to: 'Arrives at',
+  },
+  car: {
+    name: 'What is it?',
+    placeholder: 'Rental car, or airport transfer',
+    from: 'Driving from',
+    to: 'Driving to',
+  },
+  transit: {
+    name: 'What is it?',
+    placeholder: 'Taxi, funicular, a lift from Sam',
+    from: 'From',
+    to: 'To',
+  },
+};
+
 /** Types that go from one place to another, and so carry two zones. */
 export const JOURNEYS: ItemType[] = ['flight', 'train', 'ferry', 'bus', 'car', 'transit'];
 
@@ -66,6 +114,7 @@ export function ItemFormScreen() {
   const isStay = type === 'lodging';
   /** Part of first-run setup, where a rough flight is worth more than none. */
   const isOutbound = params.get('outbound') === '1';
+  const words = JOURNEY_WORDS[type];
 
   const doc = state.current?.doc;
   const existing = itemId ? doc?.items.find((i) => i.id === itemId) : undefined;
@@ -75,7 +124,9 @@ export function ItemFormScreen() {
   const [fromPlace, setFromPlace] = useState<Place | null>(null);
   const [toPlace, setToPlace] = useState<Place | null>(null);
   const [startDate, setStartDate] = useState(params.get('date') ?? '');
-  const [startTime, setStartTime] = useState('');
+  // A date handed over in the link needs its time seeding too, or the item
+  // saves without a timestamp and whatever sent you here stays unanswered.
+  const [startTime, setStartTime] = useState(params.get('date') ? '12:00' : '');
   const [endDate, setEndDate] = useState('');
   const [endTime, setEndTime] = useState('');
 
@@ -246,26 +297,24 @@ export function ItemFormScreen() {
           </p>
         ) : null}
         <TextField
-          label={isStay ? 'Hotel or rental name' : isJourney ? 'Flight or service number' : 'What is it?'}
+          label={isStay ? 'Hotel or rental name' : (words?.name ?? 'What is it?')}
           value={title}
           onChange={setTitle}
           autoFocus={!itemId}
-          placeholder={
-            isStay ? 'Hotel Artemide' : isJourney ? 'UA 123' : 'Colosseum'
-          }
+          placeholder={isStay ? 'Hotel Artemide' : (words?.placeholder ?? 'Colosseum')}
         />
 
         {isJourney ? (
           <>
             <PlaceField
-              label="Departs from"
+              label={words?.from ?? 'From'}
               value={fromPlace}
               onChange={setFromPlace}
               fallbackZone={contextZone}
               fallbackLabel={contextLabel}
             />
             <DateTimeField
-              label="Departure"
+              label={type === 'car' || type === 'transit' ? 'Leaves' : 'Departure'}
               date={startDate}
               time={startTime}
               timeZone={startZone}
@@ -273,14 +322,14 @@ export function ItemFormScreen() {
               onTimeChange={setStartTime}
             />
             <PlaceField
-              label="Arrives at"
+              label={words?.to ?? 'To'}
               value={toPlace}
               onChange={setToPlace}
               fallbackZone={contextZone}
               fallbackLabel={contextLabel}
             />
             <DateTimeField
-              label="Arrival"
+              label={type === 'car' || type === 'transit' ? 'Gets in' : 'Arrival'}
               date={endDate}
               time={endTime}
               timeZone={endZone}
