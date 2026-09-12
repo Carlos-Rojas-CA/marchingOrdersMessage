@@ -144,6 +144,30 @@ export function parseItinerary(raw: unknown): Itinerary {
   return itinerarySchema.parse(raw);
 }
 
+/** Key-sorted JSON, so two equal documents always serialise identically. */
+function canonical(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .filter(([, v]) => v !== undefined)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([k, v]) => [k, canonical(v)]),
+    );
+  }
+  return value;
+}
+
+/**
+ * Whether two itineraries say the same thing.
+ *
+ * Used to tell a real conflict from Drive moving a file's revision counter for
+ * its own reasons. Key order is not meaning, so it is normalised away.
+ */
+export function sameItinerary(a: Itinerary, b: Itinerary): boolean {
+  return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
+}
+
 /** Items that have not been tombstoned. */
 export function liveItems(doc: Itinerary): ItineraryItem[] {
   return doc.items.filter((item) => !item.deleted);

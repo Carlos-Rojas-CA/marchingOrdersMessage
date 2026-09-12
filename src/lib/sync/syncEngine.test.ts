@@ -718,3 +718,61 @@ describe('deleteTrip', () => {
     expect(await store.getTrip(folderId)).toBeUndefined();
   });
 });
+
+describe('telling a real conflict from Drive bumping its own metadata', () => {
+  async function loaded() {
+    drive.seedJson('folder-1', ITINERARY_FILENAME, {
+      schemaVersion: 1,
+      tripId: 't1',
+      name: 'Europe 2026',
+      items: [],
+    });
+    await sync.pull('folder-1');
+    const file = (await drive.listFolder('folder-1')).find(
+      (f) => f.name === ITINERARY_FILENAME,
+    )!;
+    return { folderId: 'folder-1', fileId: file.id };
+  }
+
+  test('accepts a write when only the revision counter moved', async () => {
+    const { folderId, fileId } = await loaded();
+
+    // Drive increments version for its own reasons — reindexing, metadata
+    // housekeeping — and a freshly created file often reads back at a higher
+    // revision than the one its creation returned.
+    drive.touchMetadata(fileId);
+
+    await expect(
+      sync.addItem(folderId, { type: 'flight', title: 'UA 123' }),
+    ).resolves.toBeTruthy();
+  });
+
+  test('still refuses when the content itself diverged', async () => {
+    const { folderId, fileId } = await loaded();
+
+    await drive.writeBehindOurBack(fileId, {
+      schemaVersion: 1,
+      tripId: 't1',
+      name: 'Their edit',
+      items: [],
+    });
+
+    await expect(
+      sync.addItem(folderId, { type: 'flight', title: 'UA 123' }),
+    ).rejects.toBeInstanceOf(ConflictError);
+  });
+
+  test('leaves the other writer’s content intact when it refuses', async () => {
+    const { folderId, fileId } = await loaded();
+    await drive.writeBehindOurBack(fileId, {
+      schemaVersion: 1,
+      tripId: 't1',
+      name: 'Their edit',
+      items: [],
+    });
+
+    await sync.addItem(folderId, { type: 'flight', title: 'UA 123' }).catch(() => {});
+
+    expect(JSON.parse(await drive.downloadText(fileId)).name).toBe('Their edit');
+  });
+});

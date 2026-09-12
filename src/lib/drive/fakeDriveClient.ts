@@ -154,6 +154,18 @@ export class FakeDriveClient implements DriveClient {
     return this.#meta(file);
   }
 
+  /**
+   * Test helper: bump a file's metadata without touching its content.
+   *
+   * Drive does this on its own after an upload, which is why a revision
+   * counter alone cannot be trusted to mean "someone else edited this".
+   */
+  touchMetadata(fileId: string): void {
+    const file = this.#require(fileId);
+    file.modifiedTime = this.#tick();
+    file.version = String(Number(file.version ?? '1') + 1);
+  }
+
   /** Test helper: simulate another writer changing the file behind our back. */
   async writeBehindOurBack(fileId: string, value: unknown): Promise<DriveFile> {
     return await this.updateJson(fileId, value);

@@ -2,6 +2,7 @@ import type { DriveClient, DriveFile } from '../drive/types';
 import {
   parseItem,
   parseItinerary,
+  sameItinerary,
   type DocType,
   type Itinerary,
   type ItineraryItem,
@@ -271,8 +272,21 @@ export class SyncEngine {
 
     const current = await this.drive.getFile(trip.itineraryFileId);
     const expected = cached?.driveVersion ?? null;
-    if (expected !== null && current.version !== undefined && current.version !== expected) {
-      throw new ConflictError(folderId);
+    const moved =
+      expected !== null && current.version !== undefined && current.version !== expected;
+
+    if (moved && cached) {
+      // A revision counter is not evidence of an edit. Drive bumps it for its
+      // own reasons — reindexing, metadata housekeeping — and a freshly
+      // created file frequently reads back higher than the revision its
+      // creation reported. Trusting it meant the very first save on a new trip
+      // accused the app of being someone else.
+      //
+      // So ask the only question that matters: did the content diverge from
+      // what this edit was based on?
+      if (!(await this.#contentMatches(trip.itineraryFileId, cached.doc))) {
+        throw new ConflictError(folderId);
+      }
     }
 
     const written = await this.drive.updateJson(trip.itineraryFileId, doc);
@@ -356,6 +370,18 @@ export class SyncEngine {
    */
   async removeItem(folderId: string, itemId: string): Promise<void> {
     await this.updateItem(folderId, itemId, { deleted: true });
+  }
+
+  /** Whether Drive still holds the document this edit was based on. */
+  async #contentMatches(fileId: string, baseline: Itinerary): Promise<boolean> {
+    try {
+      const remote = parseItinerary(JSON.parse(await this.drive.downloadText(fileId)));
+      return sameItinerary(remote, baseline);
+    } catch {
+      // Unreadable, or written by a newer schema. Refusing preserves whatever
+      // is there rather than overwriting something we cannot understand.
+      return false;
+    }
   }
 
   /**
