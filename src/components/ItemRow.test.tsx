@@ -321,3 +321,96 @@ describe('directions', () => {
     expect(screen.queryByRole('link', { name: /Directions/ })).not.toBeInTheDocument();
   });
 });
+
+describe('the timeline day strip', () => {
+  const TWO_CITIES = {
+    schemaVersion: 1,
+    tripId: 't1',
+    name: 'Italy 2026',
+    startDate: '2026-05-08',
+    endDate: '2026-05-16',
+    items: [
+      {
+        id: 'rome',
+        type: 'lodging',
+        title: 'Hotel Artemide',
+        startsAt: '2026-05-09T15:00:00+02:00',
+        endsAt: '2026-05-13T11:00:00+02:00',
+        location: { name: 'Hotel Artemide', city: 'Rome', timeZone: 'Europe/Rome' },
+        attachments: [],
+      },
+      {
+        id: 'hop',
+        type: 'flight',
+        title: 'Vueling VY6503',
+        startsAt: '2026-05-13T14:10:00+02:00',
+        attachments: [],
+      },
+      {
+        id: 'bcn',
+        type: 'lodging',
+        title: 'Hotel Casa Bonay',
+        startsAt: '2026-05-13T18:00:00+02:00',
+        endsAt: '2026-05-16T11:00:00+02:00',
+        location: { name: 'Hotel Casa Bonay', city: 'Barcelona', timeZone: 'Europe/Madrid' },
+        attachments: [],
+      },
+    ],
+  };
+
+  test('offers a chip for every day that has something on it', async () => {
+    await renderLens(<TimelineScreen />, { itinerary: TWO_CITIES });
+
+    // 9th and 13th have items.
+    expect(
+      await screen.findByRole('button', { name: 'Jump to Sat, May 9' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Jump to Wed, May 13' })).toBeInTheDocument();
+  });
+
+  test('labels a travel day with the move rather than a city', async () => {
+    await renderLens(<TimelineScreen />, { itinerary: TWO_CITIES });
+
+    // The 13th is neither Rome nor Barcelona; it is the day between.
+    expect(await screen.findByText('Rome → Barcelona')).toBeInTheDocument();
+  });
+
+  test('labels an ordinary day with where you are', async () => {
+    await renderLens(<TimelineScreen />, { itinerary: TWO_CITIES });
+
+    await screen.findByText('Rome → Barcelona');
+    expect(screen.getByText('Rome')).toBeInTheDocument();
+  });
+
+  test('still shows every day at once rather than filtering to one', async () => {
+    await renderLens(<TimelineScreen />, { itinerary: TWO_CITIES });
+
+    // The strip jumps; it does not narrow. Seeing the whole trip broken down
+    // day by day is the point of this screen.
+    expect(await screen.findByText('Hotel Artemide')).toBeInTheDocument();
+    expect(screen.getByText('Vueling VY6503')).toBeInTheDocument();
+    expect(screen.getByText('Hotel Casa Bonay')).toBeInTheDocument();
+  });
+
+  test('shows no strip for a trip that happens on one day', async () => {
+    await renderLens(<TimelineScreen />, {
+      itinerary: {
+        schemaVersion: 1,
+        tripId: 't1',
+        name: 'Day out',
+        items: [
+          {
+            id: 'x',
+            type: 'activity',
+            title: 'Museum',
+            startsAt: '2026-05-09T10:00:00+02:00',
+            attachments: [],
+          },
+        ],
+      },
+    });
+
+    await screen.findByText('Museum');
+    expect(screen.queryByRole('button', { name: /^Jump to/ })).not.toBeInTheDocument();
+  });
+});

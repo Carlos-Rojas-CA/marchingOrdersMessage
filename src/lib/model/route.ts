@@ -149,6 +149,32 @@ const MOVES_YOU: ReadonlySet<ItemType> = new Set<ItemType>([
   'transit',
 ]);
 
+/**
+ * Where a given day happens — or, on a travel day, the move it is.
+ *
+ * A day you change cities is not "Rome" and not "Barcelona"; it is the day
+ * between, and it is the one most likely to be opened in a hurry. Changing
+ * hotels inside one city is not a move.
+ */
+export function dayPlace(
+  doc: Itinerary,
+  date: string,
+): { from: string; to?: string } | null {
+  const covering = legsFromStays(doc).filter(
+    (leg) => date >= leg.arrive && date <= leg.depart,
+  );
+  if (covering.length === 0) return null;
+
+  const leaving = covering.find((leg) => leg.depart === date);
+  const arriving = covering.find((leg) => leg.arrive === date);
+
+  if (leaving && arriving && leaving.place !== arriving.place) {
+    return { from: leaving.place, to: arriving.place };
+  }
+
+  return { from: (arriving ?? covering[0]!).place };
+}
+
 export interface BedGap {
   from: string;
   to: string;

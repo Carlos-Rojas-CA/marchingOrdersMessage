@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import {
   addDays,
   arrivalDate,
+  dayPlace,
   bedGaps,
   legsFromStays,
   planRoute,
@@ -490,5 +491,48 @@ describe('arrivalDate', () => {
     // Only a journey starting on the first day says when the trip really
     // begins on the ground.
     expect(date).toBe('2026-05-08');
+  });
+});
+
+describe('dayPlace', () => {
+  const inRome = stay('a', 'Rome', '2026-05-09', '2026-05-13');
+  const inBarcelona = stay('b', 'Barcelona', '2026-05-13', '2026-05-16', 'Europe/Madrid');
+
+  test('names where you are on an ordinary day', () => {
+    const doc = trip({ items: [inRome, inBarcelona] });
+
+    expect(dayPlace(doc, '2026-05-10')).toEqual({ from: 'Rome' });
+  });
+
+  test('names the move on the day you change cities', () => {
+    const doc = trip({ items: [inRome, inBarcelona] });
+
+    // The 13th is not "Rome" and not "Barcelona" — it is the day between, and
+    // it is the one most likely to be opened in a hurry.
+    expect(dayPlace(doc, '2026-05-13')).toEqual({ from: 'Rome', to: 'Barcelona' });
+  });
+
+  test('names the last day of a stay as that place, not a move', () => {
+    const doc = trip({ items: [inRome] });
+
+    expect(dayPlace(doc, '2026-05-13')).toEqual({ from: 'Rome' });
+  });
+
+  test('says nothing for a day outside every stay', () => {
+    const doc = trip({ items: [inRome] });
+
+    expect(dayPlace(doc, '2026-05-20')).toBeNull();
+  });
+
+  test('treats two stays in one city as staying put', () => {
+    const doc = trip({
+      items: [
+        stay('a', 'Rome', '2026-05-09', '2026-05-11'),
+        stay('b', 'Rome', '2026-05-11', '2026-05-14'),
+      ],
+    });
+
+    // Changing hotels is not changing cities.
+    expect(dayPlace(doc, '2026-05-11')).toEqual({ from: 'Rome' });
   });
 });

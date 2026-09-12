@@ -17,3 +17,28 @@ if (!window.matchMedia) {
     dispatchEvent: () => false,
   })) as typeof window.matchMedia;
 }
+
+/**
+ * jsdom implements no layout, so it has no IntersectionObserver either. The
+ * timeline uses one to track which day is on screen; a stub keeps that code
+ * running, and the behaviour it drives is only observable with a real viewport
+ * anyway.
+ */
+if (!('IntersectionObserver' in window)) {
+  // Not typed as implementing the interface: the DOM lib's definition grows
+  // members over time, and a stub that has to track them is a maintenance
+  // cost for no benefit.
+  class StubObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords() {
+      return [];
+    }
+  }
+  Object.defineProperty(window, 'IntersectionObserver', {
+    writable: true,
+    configurable: true,
+    value: StubObserver,
+  });
+}
