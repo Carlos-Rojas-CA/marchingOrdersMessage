@@ -1,5 +1,12 @@
 import type { DriveClient, DriveFile } from '../drive/types';
-import { parseItinerary, type DocType, type Itinerary } from '../model/itinerary';
+import {
+  parseItem,
+  parseItinerary,
+  type DocType,
+  type Itinerary,
+  type ItineraryItem,
+  type NewItem,
+} from '../model/itinerary';
 import { inferDocType } from '../model/documents';
 import type { AttachmentRecord, TripStore } from '../store/tripStore';
 
@@ -61,12 +68,17 @@ export class SyncEngine {
    * own to read and write. Returns the folder id, which is the trip's identity
    * everywhere else in the app.
    */
-  async createTrip(name: string): Promise<string> {
+  async createTrip(
+    name: string,
+    dates: { startDate?: string; endDate?: string } = {},
+  ): Promise<string> {
     const folder = await this.drive.createFolder(name);
     const doc = parseItinerary({
       schemaVersion: 1,
       tripId: crypto.randomUUID(),
       name,
+      ...(dates.startDate ? { startDate: dates.startDate } : {}),
+      ...(dates.endDate ? { endDate: dates.endDate } : {}),
       updatedAt: new Date().toISOString(),
       items: [],
     });
@@ -205,6 +217,75 @@ export class SyncEngine {
       driveModifiedTime: written.modifiedTime ?? null,
       driveVersion: written.version ?? null,
     });
+  }
+
+  /**
+   * Applies a change to the trip's items and pushes the result.
+   *
+   * One place for the read-modify-write so every editing operation stamps
+   * `updatedAt` the same way and cannot forget to.
+   */
+  async #mutateItems(
+    folderId: string,
+    change: (items: ItineraryItem[]) => ItineraryItem[],
+  ): Promise<void> {
+    const record = await this.store.getItinerary(folderId);
+    if (!record) throw new Error(`Trip ${folderId} is not loaded`);
+
+    await this.push(folderId, {
+      ...record.doc,
+      items: change(record.doc.items),
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
+  /** Adds an item, returning the id it was given. */
+  async addItem(folderId: string, item: NewItem): Promise<string> {
+    const id = crypto.randomUUID();
+
+    await this.#mutateItems(folderId, (items) => [
+      ...items,
+      parseItem({
+        ...item,
+        id,
+        attachments: item.attachments ?? [],
+        updatedAt: new Date().toISOString(),
+        deleted: false,
+      }),
+    ]);
+
+    return id;
+  }
+
+  /** Edits one item, leaving fields the caller did not mention alone. */
+  async updateItem(
+    folderId: string,
+    itemId: string,
+    patch: Partial<ItineraryItem>,
+  ): Promise<void> {
+    const record = await this.store.getItinerary(folderId);
+    if (!record?.doc.items.some((i) => i.id === itemId)) {
+      throw new Error(`No item "${itemId}" in this trip`);
+    }
+
+    await this.#mutateItems(folderId, (items) =>
+      items.map((item) =>
+        item.id === itemId
+          ? parseItem({ ...item, ...patch, id: itemId, updatedAt: new Date().toISOString() })
+          : item,
+      ),
+    );
+  }
+
+  /**
+   * Removes an item by tombstoning it.
+   *
+   * The row survives so that a later merge can tell "deleted" from "never
+   * existed" — which is the whole reason the schema carries a deleted flag
+   * rather than splicing rows out of the array.
+   */
+  async removeItem(folderId: string, itemId: string): Promise<void> {
+    await this.updateItem(folderId, itemId, { deleted: true });
   }
 
   /**

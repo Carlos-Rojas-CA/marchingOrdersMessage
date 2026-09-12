@@ -185,3 +185,52 @@ export function placeFromAddress(address: string): Place | null {
 
   return null;
 }
+
+export interface ZoneContext {
+  /** A place the traveller picked on this item. */
+  explicit?: string;
+  /** An address they typed, which may name a city. */
+  address?: string;
+  /** The trip's legs, so a date can say where they are. */
+  legs?: { arrive: string; depart: string; timeZone?: string }[];
+  /** The date the item falls on. */
+  date?: string;
+  /** The zone used for the previous thing entered. */
+  lastUsed?: string;
+}
+
+/**
+ * Decides which time zone a wall-clock time belongs to.
+ *
+ * First hit wins, and the traveller only ever sees the result. The order runs
+ * from what they said, through what the trip already knows, to what they were
+ * last doing:
+ *
+ * 1. A place picked on this item
+ * 2. A city recognised inside an address they typed
+ * 3. Whichever leg the date falls in — once stays exist, the trip already
+ *    knows where they are, which beats remembering
+ * 4. The zone used for the last thing entered, for a run of items in one city
+ * 5. The device's own zone, so this always returns something usable
+ */
+export function resolveTimeZone(context: ZoneContext): string {
+  if (context.explicit) return context.explicit;
+
+  if (context.address) {
+    const fromAddress = placeFromAddress(context.address);
+    if (fromAddress) return fromAddress.timeZone;
+  }
+
+  if (context.date && context.legs) {
+    // Inclusive of the departure date: you are still in Rome on the morning
+    // you check out, whatever that evening's stay says.
+    const leg = context.legs.find(
+      (l) => context.date! >= l.arrive && context.date! <= l.depart && l.timeZone,
+    );
+    if (leg?.timeZone) return leg.timeZone;
+  }
+
+  if (context.lastUsed) return context.lastUsed;
+
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}

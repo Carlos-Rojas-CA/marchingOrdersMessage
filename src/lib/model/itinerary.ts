@@ -128,6 +128,16 @@ export type ItineraryLocation = z.infer<typeof locationSchema>;
 export type ItineraryItem = z.infer<typeof itemSchema>;
 export type Itinerary = z.infer<typeof itinerarySchema>;
 
+/** An item as a caller supplies it, before the engine assigns identity. */
+export type NewItem = Omit<ItineraryItem, 'id' | 'updatedAt' | 'deleted' | 'attachments'> & {
+  attachments?: Attachment[];
+};
+
+/** Validates a single item. Throws `ZodError`. */
+export function parseItem(raw: unknown): ItineraryItem {
+  return itemSchema.parse(raw);
+}
+
 /** Parses and validates a document read from Drive. Throws `ZodError`. */
 export function parseItinerary(raw: unknown): Itinerary {
   return itinerarySchema.parse(raw);

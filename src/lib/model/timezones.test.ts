@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import {
   offsetFor,
+  resolveTimeZone,
   placeFromAddress,
   searchPlaces,
   zonedIso,
@@ -146,5 +147,68 @@ describe('placeFromAddress', () => {
 describe('zoneLabel', () => {
   test('names the zone in a way a person can check at a glance', () => {
     expect(zoneLabel('Europe/Rome', '2026-05-09')).toContain('+02:00');
+  });
+});
+
+describe('resolveTimeZone', () => {
+  const legs = [
+    { arrive: '2026-05-09', depart: '2026-05-13', timeZone: 'Europe/Rome' },
+    { arrive: '2026-05-13', depart: '2026-05-16', timeZone: 'Europe/Madrid' },
+  ];
+
+  test('uses a place the traveller picked over everything else', () => {
+    expect(
+      resolveTimeZone({
+        explicit: 'Asia/Tokyo',
+        address: 'Via Nazionale, Roma',
+        legs,
+        date: '2026-05-10',
+        lastUsed: 'Europe/Paris',
+      }),
+    ).toBe('Asia/Tokyo');
+  });
+
+  test('falls to a city recognised in the address', () => {
+    expect(
+      resolveTimeZone({ address: 'Via Nazionale, 22, 00184 Roma RM', lastUsed: 'Europe/Paris' }),
+    ).toBe('Europe/Rome');
+  });
+
+  test('falls to whichever leg the date lands in', () => {
+    // Adding something on the 15th: the traveller is in Barcelona, and the app
+    // already knows that from the stays.
+    expect(resolveTimeZone({ legs, date: '2026-05-15', lastUsed: 'Europe/Paris' })).toBe(
+      'Europe/Madrid',
+    );
+  });
+
+  test('falls to the last place used when the date is outside every leg', () => {
+    expect(resolveTimeZone({ legs, date: '2026-05-30', lastUsed: 'Europe/Paris' })).toBe(
+      'Europe/Paris',
+    );
+  });
+
+  test('falls to the last place used when there are no legs yet', () => {
+    expect(resolveTimeZone({ date: '2026-05-10', lastUsed: 'Europe/Paris' })).toBe(
+      'Europe/Paris',
+    );
+  });
+
+  test('ends at the device zone rather than returning nothing', () => {
+    const device = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    expect(resolveTimeZone({})).toBe(device);
+  });
+
+  test('ignores an address it cannot recognise instead of guessing', () => {
+    expect(resolveTimeZone({ address: '12 Made Up Lane', lastUsed: 'Europe/Paris' })).toBe(
+      'Europe/Paris',
+    );
+  });
+
+  test('treats the day you check out as still belonging to that leg', () => {
+    // You are in Rome on the morning of the 13th, whatever the Barcelona stay
+    // says about that evening.
+    expect(resolveTimeZone({ legs, date: '2026-05-13' })).toBe('Europe/Rome');
   });
 });

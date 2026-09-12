@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { FakeDriveClient } from '../drive/fakeDriveClient';
 import { TripStore } from '../store/tripStore';
 import { ConflictError, ITINERARY_FILENAME, SyncEngine } from './syncEngine';
-import { parseItinerary } from '../model/itinerary';
+import { liveItems, parseItinerary } from '../model/itinerary';
 
 const ITINERARY = {
   schemaVersion: 1,
@@ -470,5 +470,134 @@ describe('replaceItinerary on a trip that is not loaded locally', () => {
     await expect(
       sync.replaceItinerary('folder-empty', { schemaVersion: 1, tripId: 'x', name: 'X', items: [] }),
     ).rejects.toThrow();
+  });
+});
+
+describe('item editing', () => {
+  async function tripWith(items: unknown[] = []) {
+    drive.seedJson('folder-1', ITINERARY_FILENAME, {
+      schemaVersion: 1,
+      tripId: 't1',
+      name: 'Europe 2026',
+      startDate: '2026-05-08',
+      endDate: '2026-05-21',
+      items,
+    });
+    await sync.pull('folder-1');
+    return 'folder-1';
+  }
+
+  const flight = {
+    type: 'flight' as const,
+    title: 'UA 123 — SAN → FCO',
+    startsAt: '2026-05-08T11:40:00-07:00',
+    endsAt: '2026-05-09T13:25:00+02:00',
+  };
+
+  test('adds an item and gives it an id', async () => {
+    const folderId = await tripWith();
+
+    const id = await sync.addItem(folderId, flight);
+
+    const doc = (await store.getItinerary(folderId))!.doc;
+    expect(doc.items).toHaveLength(1);
+    expect(doc.items[0]!.id).toBe(id);
+  });
+
+  test('gives every added item a distinct id', async () => {
+    const folderId = await tripWith();
+
+    const first = await sync.addItem(folderId, flight);
+    const second = await sync.addItem(folderId, flight);
+
+    expect(first).not.toBe(second);
+  });
+
+  test('stamps when the item was written, so a later merge can order it', async () => {
+    const folderId = await tripWith();
+
+    await sync.addItem(folderId, flight);
+
+    expect((await store.getItinerary(folderId))!.doc.items[0]!.updatedAt).toBeTruthy();
+  });
+
+  test('writes the addition through to Drive', async () => {
+    const folderId = await tripWith();
+
+    await sync.addItem(folderId, flight);
+
+    const file = (await drive.listFolder(folderId)).find((f) => f.name === ITINERARY_FILENAME)!;
+    expect(JSON.parse(await drive.downloadText(file.id)).items).toHaveLength(1);
+  });
+
+  test('edits an existing item without disturbing the others', async () => {
+    const folderId = await tripWith();
+    const keep = await sync.addItem(folderId, flight);
+    const change = await sync.addItem(folderId, { ...flight, title: 'Placeholder' });
+
+    await sync.updateItem(folderId, change, { title: 'VY6503 — FCO → BCN' });
+
+    const doc = (await store.getItinerary(folderId))!.doc;
+    expect(doc.items.find((i) => i.id === change)!.title).toBe('VY6503 — FCO → BCN');
+    expect(doc.items.find((i) => i.id === keep)!.title).toBe('UA 123 — SAN → FCO');
+  });
+
+  test('keeps fields the edit did not mention', async () => {
+    const folderId = await tripWith();
+    const id = await sync.addItem(folderId, { ...flight, confirmationNumber: 'PHKEYQ' });
+
+    await sync.updateItem(folderId, id, { title: 'Renamed' });
+
+    const item = (await store.getItinerary(folderId))!.doc.items[0]!;
+    expect(item.confirmationNumber).toBe('PHKEYQ');
+    expect(item.startsAt).toBe(flight.startsAt);
+  });
+
+  test('refuses to edit an item that is not there', async () => {
+    const folderId = await tripWith();
+
+    await expect(sync.updateItem(folderId, 'ghost', { title: 'x' })).rejects.toThrow(/ghost/);
+  });
+
+  test('removes an item by tombstoning it rather than deleting it', async () => {
+    const folderId = await tripWith();
+    const id = await sync.addItem(folderId, flight);
+
+    await sync.removeItem(folderId, id);
+
+    const doc = (await store.getItinerary(folderId))!.doc;
+    // The row has to survive for a later merge to know it was deleted rather
+    // than never created.
+    expect(doc.items).toHaveLength(1);
+    expect(doc.items[0]!.deleted).toBe(true);
+  });
+
+  test('hides a removed item from everything that reads the trip', async () => {
+    const folderId = await tripWith();
+    const id = await sync.addItem(folderId, flight);
+
+    await sync.removeItem(folderId, id);
+
+    const doc = (await store.getItinerary(folderId))!.doc;
+    expect(liveItems(doc)).toEqual([]);
+  });
+});
+
+describe('createTrip with dates', () => {
+  test('records the dates the trip is bounded by', async () => {
+    const folderId = await sync.createTrip('Europe 2026', {
+      startDate: '2026-05-08',
+      endDate: '2026-05-21',
+    });
+
+    const doc = (await store.getItinerary(folderId))!.doc;
+    expect(doc.startDate).toBe('2026-05-08');
+    expect(doc.endDate).toBe('2026-05-21');
+  });
+
+  test('still works for a trip with no dates yet', async () => {
+    const folderId = await sync.createTrip('Someday');
+
+    expect((await store.getItinerary(folderId))!.doc.startDate).toBeUndefined();
   });
 });
