@@ -1,8 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Marching Orders">
-  <rect width="64" height="64" rx="14" fill="#2f6df6"/>
-  <path d="M20 16h18l10 10v22a4 4 0 0 1-4 4H20a4 4 0 0 1-4-4V20a4 4 0 0 1 4-4z" fill="#fff"/>
-  <path d="M38 16v10h10" fill="#cfe0ff"/>
-  <rect x="22" y="32" width="20" height="2.6" rx="1.3" fill="#2f6df6"/>
-  <rect x="22" y="38" width="14" height="2.6" rx="1.3" fill="#7aa5ff"/>
-  <rect x="22" y="44" width="17" height="2.6" rx="1.3" fill="#7aa5ff"/>
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0B5FFF"/>
+      <stop offset="1" stop-color="#0743C0"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="13.9" fill="url(#tile)"/>
+  <!-- Paper plane: the upper wing catches the light, the folded one sits back. -->
+  <path d="M56.3 9.6 L5.8 30.1 L28.8 35.2 Z" fill="#ffffff"/>
+  <path d="M56.3 9.6 L28.8 35.2 L33.3 57.0 Z" fill="#CFDFFF"/>
+  <!-- A trail thinning out behind it, in the amber the app reserves for "now". -->
+  <circle cx="19.2" cy="46.1" r="2.9" fill="#FFB020"/>
+  <circle cx="12.8" cy="50.6" r="2.2" fill="#FFB020"/>
+  <circle cx="7.7" cy="54.4" r="1.5" fill="#FFB020"/>
 </svg>
