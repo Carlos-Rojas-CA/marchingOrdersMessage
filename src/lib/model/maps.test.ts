@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { mapsLinkFor, parseMapsUrl } from './maps';
+import { isShortenedMapsUrl, mapsLinkFor, parseMapsUrl } from './maps';
 
 describe('parseMapsUrl', () => {
   test('reads the place name and coordinates from a shared Google link', () => {
@@ -106,5 +106,23 @@ describe('mapsLinkFor', () => {
 
   test('has nothing to offer for a place with nothing in it', () => {
     expect(mapsLinkFor({ name: '' }, 'other')).toBeNull();
+  });
+});
+
+describe('isShortenedMapsUrl', () => {
+  test('recognises the link a phone share sheet produces', () => {
+    expect(isShortenedMapsUrl('https://maps.app.goo.gl/abc123')).toBe(true);
+    expect(isShortenedMapsUrl('https://goo.gl/maps/abc123')).toBe(true);
+  });
+
+  test('does not mistake a full link for a shortened one', () => {
+    expect(
+      isShortenedMapsUrl('https://www.google.com/maps/place/Somewhere/@40.8,14.2,17z'),
+    ).toBe(false);
+  });
+
+  test('says no to things that are not links', () => {
+    expect(isShortenedMapsUrl('Via Toledo 1')).toBe(false);
+    expect(isShortenedMapsUrl('')).toBe(false);
   });
 });

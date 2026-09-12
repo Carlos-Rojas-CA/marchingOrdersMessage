@@ -605,9 +605,10 @@ describe('finding your way to an activity', () => {
     await user.click(await screen.findByLabelText('Map link (optional)'));
     await user.paste('https://maps.app.goo.gl/abc123');
 
-    // The link still works when tapped; pretending otherwise would be worse
-    // than saying plainly that it cannot be inspected.
-    expect(await screen.findByText(/cannot be read here/)).toBeInTheDocument();
+    // The link still works when tapped. Saying so, and saying what to do
+    // instead, beats a bare failure.
+    expect(await screen.findByText(/opens your maps app/)).toBeInTheDocument();
+    expect(screen.getByText(/add the address below/)).toBeInTheDocument();
   });
 
   test('offers directions once there is anywhere to go', async () => {

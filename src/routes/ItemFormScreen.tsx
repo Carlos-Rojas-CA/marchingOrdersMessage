@@ -6,7 +6,7 @@ import { useLoadedTrip } from '../hooks/useLoadedTrip';
 import { ITEM_TYPES, type ItemType } from '../lib/model/itinerary';
 import { legsFromStays } from '../lib/model/route';
 import { resolveTimeZone, timestampFrom, type Place } from '../lib/model/timezones';
-import { parseMapsUrl } from '../lib/model/maps';
+import { isShortenedMapsUrl, parseMapsUrl } from '../lib/model/maps';
 import { searchPlaces } from '../lib/model/timezones';
 import { Button, ItemIcon } from '../components/ui';
 import {
@@ -235,7 +235,11 @@ export function ItemFormScreen() {
 
     const read = parseMapsUrl(value);
     if (!read) {
-      setPastedNote('Saved. This link opens your maps app, but its details cannot be read here.');
+      setPastedNote(
+        isShortenedMapsUrl(value)
+          ? 'Saved — this opens your maps app. Short links hide their details, so add the address below, or paste the full link from a computer to fill it in.'
+          : 'Saved. This link opens your maps app, but its details cannot be read here.',
+      );
       return;
     }
     if (read.name && !title.trim()) setTitle(read.name);

@@ -124,6 +124,25 @@ export function parseMapsUrl(input: string): ParsedPlace | null {
   return found.name || found.lat !== undefined ? found : null;
 }
 
+/**
+ * Whether this is one of the shortened links a phone's share sheet produces.
+ *
+ * Worth telling apart because nothing can be read from one, and the reason is
+ * worth explaining rather than looking like a failure: the target sits behind
+ * a redirect served with no `Access-Control-Allow-Origin` header and
+ * `X-Frame-Options: SAMEORIGIN`, so neither fetch nor an iframe may follow it.
+ * Only a server can, and standing one up to recover a name that can be typed
+ * in five seconds is a poor trade.
+ */
+export function isShortenedMapsUrl(input: string): boolean {
+  try {
+    const host = new URL(input.trim()).hostname.toLowerCase();
+    return host.endsWith('goo.gl');
+  } catch {
+    return false;
+  }
+}
+
 export type Platform = 'ios' | 'other';
 
 /** Whether this device's default maps app is Apple's. */
