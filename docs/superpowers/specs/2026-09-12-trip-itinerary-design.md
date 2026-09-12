@@ -563,7 +563,66 @@ Phases get their own implementation plans rather than one plan spanning all six
 — phase 1's findings may adjust phase 2, and a plan written now for phase 6
 would be guesswork.
 
-## 18. Open questions
+## 18. The trip builder
+
+Approved 2026-09-12. Guided setup in the order trips are actually planned,
+free-form afterwards.
+
+1. **Name and dates.** Dates bound everything; both kinds of gap below are
+   measured against them.
+2. **Route.** Places and **nights** — not dates. Dates are derived, so changing
+   one stop cascades through every later one. That is the arithmetic people get
+   wrong on paper and retype an itinerary to fix. Skippable; one row for a trip
+   that stays put.
+3. **Flights out and back.** The only items carrying two different zones.
+4. **Legs.** Each stay, plus the moves between them.
+5. **Free-form day view** with a type-scoped add sheet.
+
+### Legs are derived, never stored
+
+A stay in Rome from the 9th to the 13th *is* the statement "you are in Rome for
+those nights", so `legsFromStays` reads the route back off the itinerary rather
+than keeping a second copy that could drift. The route screen writes ordinary
+stays; it is a sketching aid, not a parallel model.
+
+Two warnings fall out of that for free:
+
+- **Bed gaps** — nights inside the trip with nowhere to sleep. A night crossing
+  midnight on a flight or train counts as covered: a warning that fires on a
+  red-eye is noise, and noise is how warnings stop being read.
+- **Transition gaps** — consecutive stays in different cities with nothing
+  booked to move you between them. On a multi-country trip this is the mistake
+  that actually happens: every hotel booked, one train forgotten.
+
+Neither blocks anything. Both are stated and moved past.
+
+### Time zones are derived, never typed
+
+A traveller types the time printed on their booking and names the place. The
+offset comes from the place **and the date**, via the browser's own time zone
+database — so daylight saving is right, half-hour zones work, and there is no
+table here to go stale when a country changes its rules.
+
+Resolution order, first hit wins:
+
+1. A place picked on the item
+2. A city recognised inside an address that was typed
+3. Which leg the date falls in
+4. The last place used
+
+Rule 2 declines rather than guesses when nothing is recognisable, because a
+wrong guess silently shifts a time and the later rules can answer instead.
+
+Worth recording: Italy, Spain, France and Germany are all one zone, so a
+four-country European trip needs none of this. It earns its keep crossing into
+the UK, Greece, or flying home.
+
+### Deferred
+
+Drag to reschedule; an airport database beyond the codes already listed;
+per-traveller itineraries; currency; visa checks.
+
+## 19. Open questions
 
 1. §11's scope question. Resolved by phase 1 before anything is built on it.
 2. Whether large photo attachments should be downscaled on upload. Deferred until

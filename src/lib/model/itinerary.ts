@@ -87,6 +87,10 @@ const locationSchema = z.looseObject({
   address: z.string().optional(),
   /** Rendered as a tel: link — the thing you need when the address has not helped. */
   phone: z.string().optional(),
+  /** The city, which is what groups a trip into legs. */
+  city: z.string().optional(),
+  /** IANA zone, so times here can be composed without guessing at an offset. */
+  timeZone: z.string().optional(),
   lat: z.number().optional(),
   lng: z.number().optional(),
 });
