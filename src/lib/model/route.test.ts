@@ -7,6 +7,7 @@ import {
   legsFromStays,
   planRoute,
   transitionGaps,
+  tripDays,
 } from './route';
 import { parseItinerary, type Itinerary } from './itinerary';
 
@@ -534,5 +535,63 @@ describe('dayPlace', () => {
 
     // Changing hotels is not changing cities.
     expect(dayPlace(doc, '2026-05-11')).toEqual({ from: 'Rome' });
+  });
+});
+
+describe('tripDays', () => {
+  test('lists every day of the trip, not only the busy ones', () => {
+    const days = tripDays(
+      trip({ startDate: '2026-05-08', endDate: '2026-05-12', items: [] }),
+    );
+
+    // A strip that skips the empty days reads as broken rather than sparse,
+    // and an empty day is exactly the one you want to select to fill it.
+    expect(days).toEqual([
+      '2026-05-08',
+      '2026-05-09',
+      '2026-05-10',
+      '2026-05-11',
+      '2026-05-12',
+    ]);
+  });
+
+  test('falls back to the days that have something when there are no dates', () => {
+    const days = tripDays(
+      parseItinerary({
+        schemaVersion: 1,
+        tripId: 't',
+        name: 'Someday',
+        items: [
+          { id: 'a', type: 'activity', title: 'One', startsAt: '2026-05-09T10:00:00Z' },
+          { id: 'b', type: 'activity', title: 'Two', startsAt: '2026-05-11T10:00:00Z' },
+        ],
+      }),
+    );
+
+    // Filled in between rather than left sparse: the span from the first
+    // dated thing to the last is the trip, whether or not anyone said so.
+    expect(days).toEqual(['2026-05-09', '2026-05-10', '2026-05-11']);
+  });
+
+  test('stretches to cover an item outside the stated dates', () => {
+    const days = tripDays(
+      trip({
+        startDate: '2026-05-08',
+        endDate: '2026-05-09',
+        items: [
+          { id: 'late', type: 'activity', title: 'Late', startsAt: '2026-05-11T10:00:00Z' },
+        ],
+      }),
+    );
+
+    // Something dated outside the trip is still part of it; hiding the day it
+    // falls on would hide the item.
+    expect(days).toContain('2026-05-11');
+  });
+
+  test('has nothing to show for a trip with neither dates nor items', () => {
+    expect(
+      tripDays(parseItinerary({ schemaVersion: 1, tripId: 't', name: 'Empty', items: [] })),
+    ).toEqual([]);
   });
 });

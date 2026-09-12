@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { TimelineScreen } from '../routes/TimelineScreen';
 import { renderLens } from '../test/renderApp';
 
@@ -358,14 +359,69 @@ describe('the timeline day strip', () => {
     ],
   };
 
-  test('offers a chip for every day that has something on it', async () => {
+  test('offers a chip for every day of the trip, including the empty ones', async () => {
     await renderLens(<TimelineScreen />, { itinerary: TWO_CITIES });
 
-    // 9th and 13th have items.
-    expect(
-      await screen.findByRole('button', { name: 'Jump to Sat, May 9' }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Jump to Wed, May 13' })).toBeInTheDocument();
+    // A strip listing only busy days jumps 9, 13 and reads as broken; the
+    // quiet days in between are also days you might want to fill.
+    expect(await screen.findByRole('button', { name: 'Show Fri, May 8' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show Sun, May 10' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show Wed, May 13' })).toBeInTheDocument();
+  });
+
+  test('shows everything until a day is chosen', async () => {
+    await renderLens(<TimelineScreen />, { itinerary: TWO_CITIES });
+
+    expect(await screen.findByRole('button', { name: 'All' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  test('narrows to one day when its chip is tapped', async () => {
+    await renderLens(<TimelineScreen />, { itinerary: TWO_CITIES });
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Show Wed, May 13' }));
+
+    expect(await screen.findByText('Vueling VY6503')).toBeInTheDocument();
+    // Rome's stay began on the 9th and is not part of this day.
+    expect(screen.queryByText('Hotel Artemide')).not.toBeInTheDocument();
+  });
+
+  test('All puts the whole trip back', async () => {
+    await renderLens(<TimelineScreen />, { itinerary: TWO_CITIES });
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Show Wed, May 13' }));
+    await user.click(screen.getByRole('button', { name: 'All' }));
+
+    expect(await screen.findByText('Hotel Artemide')).toBeInTheDocument();
+    expect(screen.getByText('Hotel Casa Bonay')).toBeInTheDocument();
+  });
+
+  test('tapping the chosen day again clears the filter', async () => {
+    await renderLens(<TimelineScreen />, { itinerary: TWO_CITIES });
+    const user = userEvent.setup();
+
+    const chip = await screen.findByRole('button', { name: 'Show Wed, May 13' });
+    await user.click(chip);
+    await user.click(chip);
+
+    expect(await screen.findByText('Hotel Artemide')).toBeInTheDocument();
+  });
+
+  test('offers to fill a day that has nothing on it', async () => {
+    await renderLens(<TimelineScreen />, { itinerary: TWO_CITIES });
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Show Sun, May 10' }));
+
+    expect(await screen.findByText('Nothing on this day yet.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Add something/ })).toHaveAttribute(
+      'href',
+      expect.stringContaining('date=2026-05-10'),
+    );
   });
 
   test('labels a travel day with the move rather than a city', async () => {
@@ -385,8 +441,7 @@ describe('the timeline day strip', () => {
   test('still shows every day at once rather than filtering to one', async () => {
     await renderLens(<TimelineScreen />, { itinerary: TWO_CITIES });
 
-    // The strip jumps; it does not narrow. Seeing the whole trip broken down
-    // day by day is the point of this screen.
+    // All is the default, so the whole trip is visible without choosing it.
     expect(await screen.findByText('Hotel Artemide')).toBeInTheDocument();
     expect(screen.getByText('Vueling VY6503')).toBeInTheDocument();
     expect(screen.getByText('Hotel Casa Bonay')).toBeInTheDocument();
@@ -411,6 +466,6 @@ describe('the timeline day strip', () => {
     });
 
     await screen.findByText('Museum');
-    expect(screen.queryByRole('button', { name: /^Jump to/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Show/ })).not.toBeInTheDocument();
   });
 });

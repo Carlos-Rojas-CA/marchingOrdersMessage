@@ -175,6 +175,33 @@ export function dayPlace(
   return { from: (arriving ?? covering[0]!).place };
 }
 
+/**
+ * Every day the trip spans, including the ones with nothing on them.
+ *
+ * A day strip that lists only the busy days jumps 17, 18, 20, 23 and reads as
+ * broken rather than sparse — and an empty day is precisely the one worth
+ * selecting, because it is the one still to be filled.
+ */
+export function tripDays(doc: Itinerary): string[] {
+  const dated = liveItems(doc)
+    .map((item) => item.startsAt?.slice(0, 10))
+    .filter((d): d is string => Boolean(d));
+
+  const bounds = [doc.startDate, doc.endDate, ...dated].filter(
+    (d): d is string => Boolean(d),
+  );
+  if (bounds.length === 0) return [];
+
+  // Stretched to cover anything dated outside the stated range: hiding the day
+  // would hide the item sitting on it.
+  const first = bounds.reduce((a, b) => (a < b ? a : b));
+  const last = bounds.reduce((a, b) => (a > b ? a : b));
+
+  const days: string[] = [];
+  for (let day = first; day <= last; day = addDays(day, 1)) days.push(day);
+  return days;
+}
+
 export interface BedGap {
   from: string;
   to: string;
