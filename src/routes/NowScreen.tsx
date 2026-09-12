@@ -52,9 +52,15 @@ export function NowScreen() {
             <span className="inline-block size-1.5 rounded-full bg-live" aria-hidden />
             Happening now
           </h2>
-          <div className="rounded-2xl border border-live/30 bg-live-bg px-3">
+          <div className="flex flex-col gap-2">
             {view.current.map((item) => (
-              <ItemRow key={item.id} item={item} folderId={folderId} />
+              <ItemRow
+                key={item.id}
+                item={item}
+                folderId={folderId}
+                variant="tile"
+                tone="live"
+              />
             ))}
           </div>
         </section>
@@ -65,16 +71,18 @@ export function NowScreen() {
           <h2 className="day-rule mb-1 border-b border-text/15 pb-1.5 text-muted">
             Next up
           </h2>
-          {next.map((item) => (
-            <div key={item.id}>
-              <p className="tnum pt-3 text-xs text-muted">
-                {item.startsAt
-                  ? `${formatDayLabel(item.startsAt.slice(0, 10))} · ${formatTimeOfDay(item.startsAt)}`
-                  : null}
-              </p>
-              <ItemRow item={item} folderId={folderId} />
-            </div>
-          ))}
+          <div className="flex flex-col gap-3 pt-2">
+            {next.map((item) => (
+              <div key={item.id} className="flex flex-col gap-1">
+                <p className="tnum text-xs text-muted">
+                  {item.startsAt
+                    ? `${formatDayLabel(item.startsAt.slice(0, 10))} · ${formatTimeOfDay(item.startsAt)}`
+                    : null}
+                </p>
+                <ItemRow item={item} folderId={folderId} variant="tile" />
+              </div>
+            ))}
+          </div>
         </section>
       ) : null}
     </div>

@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TimelineScreen } from '../routes/TimelineScreen';
+import { NowScreen } from '../routes/NowScreen';
 import { renderLens } from '../test/renderApp';
 
 const HOTEL = {
@@ -520,5 +521,83 @@ describe('a tile with nothing attached', () => {
     const directions = await screen.findByRole('link', { name: /Directions/ });
     // Indented past the icon, which is where the title starts.
     expect(directions.parentElement?.className).toContain('pl-11');
+  });
+});
+
+describe('the strip’s All chip', () => {
+  const TRIP = {
+    schemaVersion: 1,
+    tripId: 't1',
+    name: 'Italy 2026',
+    startDate: '2026-05-08',
+    endDate: '2026-05-16',
+    items: [
+      {
+        id: 'a',
+        type: 'activity',
+        title: 'Museum',
+        startsAt: '2026-05-10T10:00:00+02:00',
+        attachments: [],
+      },
+    ],
+  };
+
+  test('sits outside the part that scrolls, so it never slides away', async () => {
+    await renderLens(<TimelineScreen />, { itinerary: TRIP });
+
+    const all = await screen.findByRole('button', { name: 'All' });
+    const aDay = screen.getByRole('button', { name: 'Show Sun, May 10' });
+
+    // A way back that scrolls off the screen is one you have to hunt for.
+    const scroller = aDay.parentElement!;
+    expect(scroller.className).toContain('overflow-x-auto');
+    expect(scroller.contains(all)).toBe(false);
+  });
+});
+
+describe('the Now screen', () => {
+  /** A stay spanning right now, so the Now lens has something current. */
+  function currentTrip() {
+    const now = new Date();
+    const day = (offset: number) =>
+      new Date(now.getTime() + offset * 86_400_000).toISOString().slice(0, 10);
+    return {
+      schemaVersion: 1,
+      tripId: 't1',
+      name: 'Italy 2026',
+      items: [
+        {
+          id: 'stay',
+          type: 'lodging',
+          title: 'Hotel Artemide',
+          startsAt: `${day(-1)}T15:00:00+02:00`,
+          endsAt: `${day(2)}T11:00:00+02:00`,
+          attachments: [],
+        },
+        {
+          id: 'later',
+          type: 'activity',
+          title: 'Colosseum',
+          startsAt: `${day(1)}T09:30:00+02:00`,
+          attachments: [],
+        },
+      ],
+    };
+  }
+
+  test('marks what is happening now with the live treatment', async () => {
+    await renderLens(<NowScreen />, { itinerary: currentTrip() });
+
+    const card = (await screen.findByText('Hotel Artemide')).closest('div.rounded-2xl')!;
+    // Amber is reserved for the one thing that is true right now.
+    expect(card.className).toContain('border-live');
+  });
+
+  test('draws what is next as an ordinary tile', async () => {
+    await renderLens(<NowScreen />, { itinerary: currentTrip() });
+
+    const card = (await screen.findByText('Colosseum')).closest('div.rounded-2xl')!;
+    expect(card.className).toContain('bg-surface');
+    expect(card.className).not.toContain('border-live');
   });
 });

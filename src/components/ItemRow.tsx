@@ -23,12 +23,16 @@ export function ItemRow({
   item,
   folderId,
   variant = 'row',
+  tone,
 }: {
   item: ItineraryItem;
   folderId: string;
   variant?: 'row' | 'tile';
+  /** `live` marks the thing happening right now, in the departure-board amber. */
+  tone?: 'live';
 }) {
   const tile = variant === 'tile';
+  const live = tone === 'live';
   const time = formatTimeOfDay(item.startsAt);
   // Rendered as a span rather than a moment only when both ends are known.
   const stay = item.type === 'lodging' && item.startsAt && item.endsAt;
@@ -47,7 +51,9 @@ export function ItemRow({
     <div
       className={
         tile
-          ? 'rounded-2xl border border-border bg-surface'
+          ? live
+            ? 'rounded-2xl border border-live/40 bg-live-bg'
+            : 'rounded-2xl border border-border bg-surface'
           : 'border-b border-border last:border-0'
       }
     >

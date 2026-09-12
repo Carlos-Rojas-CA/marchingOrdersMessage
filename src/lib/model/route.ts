@@ -202,6 +202,22 @@ export function tripDays(doc: Itinerary): string[] {
   return days;
 }
 
+/**
+ * The day a trip should open on.
+ *
+ * Today while the trip is under way; otherwise the nearest end of it. A trip
+ * that has finished opens on its last day rather than its first, because that
+ * is the part most recently lived in.
+ */
+export function nearestDay(days: string[], today: string): string | null {
+  if (days.length === 0) return null;
+  if (days.includes(today)) return today;
+
+  return days.reduce((best, day) =>
+    Math.abs(daysBetween(day, today)) < Math.abs(daysBetween(best, today)) ? day : best,
+  );
+}
+
 export interface BedGap {
   from: string;
   to: string;

@@ -5,6 +5,7 @@ import {
   dayPlace,
   bedGaps,
   legsFromStays,
+  nearestDay,
   planRoute,
   transitionGaps,
   tripDays,
@@ -593,5 +594,31 @@ describe('tripDays', () => {
     expect(
       tripDays(parseItinerary({ schemaVersion: 1, tripId: 't', name: 'Empty', items: [] })),
     ).toEqual([]);
+  });
+});
+
+describe('nearestDay', () => {
+  const days = ['2026-09-28', '2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02'];
+
+  test('picks today when the trip is under way', () => {
+    expect(nearestDay(days, '2026-09-30')).toBe('2026-09-30');
+  });
+
+  test('picks the first day when the trip has not started', () => {
+    expect(nearestDay(days, '2026-08-01')).toBe('2026-09-28');
+  });
+
+  test('picks the last day when the trip is over', () => {
+    // Opening a finished trip should land at the end of it, which is the part
+    // you were most recently living in.
+    expect(nearestDay(days, '2026-12-01')).toBe('2026-10-02');
+  });
+
+  test('picks the closer side when today falls in a gap', () => {
+    expect(nearestDay(['2026-09-01', '2026-10-01'], '2026-09-25')).toBe('2026-10-01');
+  });
+
+  test('has nothing to pick from an empty trip', () => {
+    expect(nearestDay([], '2026-09-30')).toBeNull();
   });
 });

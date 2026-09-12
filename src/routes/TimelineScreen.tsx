@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { CalendarDays, Plus } from 'lucide-react';
 import { useAppState } from '../hooks/useServices';
 import { groupByDay } from '../lib/model/days';
-import { dayPlace, tripDays } from '../lib/model/route';
+import { dayPlace, nearestDay, tripDays } from '../lib/model/route';
 import { formatDayLabel } from '../lib/model/format';
 import { ItemRow } from '../components/ItemRow';
 import { DayStrip } from '../components/DayStrip';
@@ -42,6 +42,13 @@ export function TimelineScreen() {
 
   const [selected, setSelected] = useState<string | null>(null);
 
+  // Today while the trip is running, otherwise the nearest end of it. Only a
+  // scroll position — All stays selected, so nothing is hidden by it.
+  const openAt = useMemo(
+    () => nearestDay(days, new Date().toISOString().slice(0, 10)),
+    [days],
+  );
+
   if (!doc || !grouped) return null;
 
   if (grouped.days.length === 0 && grouped.unscheduled.length === 0) {
@@ -64,7 +71,13 @@ export function TimelineScreen() {
   return (
     <div className="pb-4">
       <div className="sticky top-14 z-[2] bg-bg/95 pt-2 backdrop-blur">
-        <DayStrip days={days} busy={busy} selected={selected} onSelect={setSelected} />
+        <DayStrip
+          days={days}
+          busy={busy}
+          selected={selected}
+          onSelect={setSelected}
+          openAt={openAt}
+        />
       </div>
 
       {selected ? (
