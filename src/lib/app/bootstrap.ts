@@ -25,7 +25,20 @@ export async function bootstrap(
   drive?: DriveClient,
   storeName?: string,
 ): Promise<Services> {
-  const auth = new GoogleAuth(createGisTokenSource(GOOGLE_CLIENT_ID));
+  // With an injected Drive — demo mode, or a test — there is no Google in the
+  // picture, so the token source must never be reached. Handing it a stub is
+  // clearer than scattering "unless we are pretending" checks through the UI.
+  const auth = drive
+    ? new GoogleAuth({
+        request: async () => ({ accessToken: 'offline', expiresInSeconds: 3600 }),
+      })
+    : new GoogleAuth(createGisTokenSource(GOOGLE_CLIENT_ID));
+
+  // The stub is primed so it reports as signed in: against a fake Drive there
+  // is nothing to sign in to, and the guards that skip syncing without a token
+  // should not mistake that for being signed out.
+  if (drive) await auth.signIn();
+
   const driveClient =
     drive ??
     new GoogleDriveClient({ getAccessToken: () => auth.getAccessToken() });

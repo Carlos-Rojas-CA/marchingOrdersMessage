@@ -51,16 +51,20 @@ function TabLink({
 
 export function TripShell() {
   const { folderId = '' } = useParams();
-  const { app } = useServices();
+  const { app, auth } = useServices();
   const state = useAppState();
   const trip = state.current?.trip;
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     // Render from local storage first, then reconcile in the background. The
-    // refresh is deliberately not awaited by anything the user can see.
-    void app.openTrip(folderId).then(() => app.refresh(folderId));
-  }, [app, folderId]);
+    // refresh is deliberately not awaited by anything the user can see, and is
+    // skipped without a token rather than prompting: opening a trip is not a
+    // request to sign in.
+    void app.openTrip(folderId).then(() => {
+      if (auth.hasValidToken()) return app.refresh(folderId);
+    });
+  }, [app, auth, folderId]);
 
   return (
     <div className="mx-auto flex min-h-full max-w-2xl flex-col">
@@ -98,7 +102,7 @@ export function TripShell() {
 
           <button
             type="button"
-            onClick={() => void app.refresh(folderId)}
+            onClick={() => void auth.signIn().then(() => app.refresh(folderId))}
             disabled={state.syncing || !state.online}
             aria-label="Refresh from Drive"
             className="flex size-10 items-center justify-center rounded-lg text-muted hover:bg-surface-2 disabled:opacity-40"

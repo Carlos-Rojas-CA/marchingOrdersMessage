@@ -13,17 +13,31 @@ function sourceReturning(...grants: { accessToken: string; expiresInSeconds: num
 
 const anHour = { accessToken: 'token-1', expiresInSeconds: 3600 };
 
+/** A private store per instance, so no test inherits another's token. */
+function memoryStorage() {
+  const data = new Map<string, string>();
+  return {
+    getItem: (k: string) => data.get(k) ?? null,
+    setItem: (k: string, v: string) => void data.set(k, v),
+    removeItem: (k: string) => void data.delete(k),
+  };
+}
+
+function newAuth(source: TokenSource, now: () => number = () => Date.now()) {
+  return new GoogleAuth(source, now, memoryStorage());
+}
+
 describe('GoogleAuth', () => {
   test('requests a token on first use', async () => {
     const source = sourceReturning(anHour);
-    const auth = new GoogleAuth(source);
+    const auth = newAuth(source);
 
     expect(await auth.getAccessToken()).toBe('token-1');
   });
 
   test('reuses a token that is still valid rather than asking again', async () => {
     const source = sourceReturning(anHour);
-    const auth = new GoogleAuth(source);
+    const auth = newAuth(source);
 
     await auth.getAccessToken();
     await auth.getAccessToken();
@@ -34,7 +48,7 @@ describe('GoogleAuth', () => {
   test('requests a fresh token once the current one has expired', async () => {
     let now = 0;
     const source = sourceReturning(anHour, { accessToken: 'token-2', expiresInSeconds: 3600 });
-    const auth = new GoogleAuth(source, () => now);
+    const auth = newAuth(source, () => now);
 
     await auth.getAccessToken();
     now = 3_600_000 + 1;
@@ -45,7 +59,7 @@ describe('GoogleAuth', () => {
   test('renews slightly before expiry rather than exactly at it', async () => {
     let now = 0;
     const source = sourceReturning(anHour, { accessToken: 'token-2', expiresInSeconds: 3600 });
-    const auth = new GoogleAuth(source, () => now);
+    const auth = newAuth(source, () => now);
     await auth.getAccessToken();
 
     // A token that expires mid-flight fails the request that carried it, so it
@@ -57,34 +71,23 @@ describe('GoogleAuth', () => {
 
   test('asks silently first so a signed-in user is never interrupted', async () => {
     const source = sourceReturning(anHour);
-    const auth = new GoogleAuth(source);
+    const auth = newAuth(source);
 
     await auth.getAccessToken();
 
     expect(source.request).toHaveBeenCalledWith({ silent: true });
   });
 
-  test('falls back to an interactive prompt when the silent request fails', async () => {
-    const request = vi
-      .fn()
-      .mockRejectedValueOnce(new Error('no active session'))
-      .mockResolvedValueOnce(anHour);
-    const auth = new GoogleAuth({ request });
-
-    expect(await auth.getAccessToken()).toBe('token-1');
-    expect(request).toHaveBeenLastCalledWith({ silent: false });
-  });
-
   test('propagates a failure when even the interactive prompt is refused', async () => {
     const request = vi.fn().mockRejectedValue(new Error('user closed the dialog'));
-    const auth = new GoogleAuth({ request });
+    const auth = newAuth({ request });
 
-    await expect(auth.getAccessToken()).rejects.toThrow(/user closed the dialog/);
+    await expect(auth.signIn()).rejects.toThrow(/user closed the dialog/);
   });
 
   test('shares one in-flight request between concurrent callers', async () => {
     const source = sourceReturning(anHour);
-    const auth = new GoogleAuth(source);
+    const auth = newAuth(source);
 
     await Promise.all([auth.getAccessToken(), auth.getAccessToken(), auth.getAccessToken()]);
 
@@ -95,7 +98,7 @@ describe('GoogleAuth', () => {
 
   test('forgets the token on sign out', async () => {
     const source = sourceReturning(anHour, { accessToken: 'token-2', expiresInSeconds: 3600 });
-    const auth = new GoogleAuth(source);
+    const auth = newAuth(source);
     await auth.getAccessToken();
 
     auth.signOut();
@@ -104,7 +107,7 @@ describe('GoogleAuth', () => {
   });
 
   test('reports whether a usable token is currently held', async () => {
-    const auth = new GoogleAuth(sourceReturning(anHour));
+    const auth = newAuth(sourceReturning(anHour));
 
     expect(auth.hasValidToken()).toBe(false);
     await auth.getAccessToken();
@@ -115,7 +118,7 @@ describe('GoogleAuth', () => {
 describe('switching accounts', () => {
   test('drops the current token so the next call re-authorises', async () => {
     const source = sourceReturning(anHour, { accessToken: 'token-2', expiresInSeconds: 3600 });
-    const auth = new GoogleAuth(source);
+    const auth = newAuth(source);
     await auth.getAccessToken();
 
     auth.switchAccount();
@@ -126,7 +129,7 @@ describe('switching accounts', () => {
 
   test('shows the account chooser instead of silently reusing the session', async () => {
     const request = vi.fn().mockResolvedValue(anHour);
-    const auth = new GoogleAuth({ request });
+    const auth = newAuth({ request });
     await auth.getAccessToken();
 
     auth.switchAccount();
@@ -140,7 +143,7 @@ describe('switching accounts', () => {
   test('goes back to silent renewal once an account has been chosen', async () => {
     let now = 0;
     const request = vi.fn().mockResolvedValue(anHour);
-    const auth = new GoogleAuth({ request }, () => now);
+    const auth = newAuth({ request }, () => now);
 
     auth.switchAccount();
     await auth.getAccessToken();
@@ -154,7 +157,7 @@ describe('switching accounts', () => {
 describe('signing out', () => {
   test('withdraws the app’s access rather than only forgetting it', async () => {
     const revoke = vi.fn().mockResolvedValue(undefined);
-    const auth = new GoogleAuth({ request: sourceReturning(anHour).request, revoke });
+    const auth = newAuth({ request: sourceReturning(anHour).request, revoke });
     await auth.getAccessToken();
 
     await auth.signOut();
@@ -166,7 +169,7 @@ describe('signing out', () => {
   });
 
   test('forgets the token even if revoking fails', async () => {
-    const auth = new GoogleAuth({
+    const auth = newAuth({
       request: sourceReturning(anHour, { accessToken: 'token-2', expiresInSeconds: 3600 })
         .request,
       revoke: vi.fn().mockRejectedValue(new Error('offline')),
@@ -181,7 +184,7 @@ describe('signing out', () => {
 
   test('does nothing to revoke when no token is held', async () => {
     const revoke = vi.fn();
-    const auth = new GoogleAuth({ request: sourceReturning(anHour).request, revoke });
+    const auth = newAuth({ request: sourceReturning(anHour).request, revoke });
 
     await auth.signOut();
 
@@ -189,7 +192,7 @@ describe('signing out', () => {
   });
 
   test('works with a token source that cannot revoke', async () => {
-    const auth = new GoogleAuth(sourceReturning(anHour));
+    const auth = newAuth(sourceReturning(anHour));
     await auth.getAccessToken();
 
     await expect(auth.signOut()).resolves.toBeUndefined();
@@ -197,39 +200,85 @@ describe('signing out', () => {
   });
 });
 
-describe('priming a session on load', () => {
-  test('reports success when an existing Google session can be reused', async () => {
-    const auth = new GoogleAuth(sourceReturning(anHour));
 
-    expect(await auth.primeSilently()).toBe(true);
-    expect(auth.hasValidToken()).toBe(true);
-  });
-
-  test('reports failure instead of prompting when there is no session', async () => {
+describe('never prompting without a gesture', () => {
+  test('getAccessToken does not fall back to an interactive prompt', async () => {
     const request = vi.fn().mockRejectedValue(new Error('no active session'));
-    const auth = new GoogleAuth({ request });
+    const auth = newAuth({ request });
 
-    expect(await auth.primeSilently()).toBe(false);
-  });
+    await expect(auth.getAccessToken()).rejects.toThrow();
 
-  test('never falls back to an interactive prompt', async () => {
-    const request = vi.fn().mockRejectedValue(new Error('no active session'));
-    const auth = new GoogleAuth({ request });
-
-    await auth.primeSilently();
-
-    // This runs on page load, with no click behind it. A popup here would be
-    // both unasked for and blocked by the browser.
+    // Google's token client opens a popup whatever prompt is asked for, so a
+    // background Drive call must never reach one. Nothing on page load has a
+    // click behind it, and browsers block popups that do not.
     expect(request).toHaveBeenCalledTimes(1);
     expect(request).toHaveBeenCalledWith({ silent: true });
   });
 
-  test('reuses a token already in hand without asking again', async () => {
-    const source = sourceReturning(anHour);
-    const auth = new GoogleAuth(source);
-    await auth.getAccessToken();
+  test('signIn is the one path allowed to prompt', async () => {
+    const request = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('no active session'))
+      .mockResolvedValueOnce(anHour);
+    const auth = newAuth({ request });
 
-    expect(await auth.primeSilently()).toBe(true);
+    expect(await auth.signIn()).toBe('token-1');
+    expect(request).toHaveBeenLastCalledWith({ silent: false });
+  });
+
+  test('signIn reuses a token already held rather than prompting again', async () => {
+    const source = sourceReturning(anHour);
+    const auth = newAuth(source);
+    await auth.signIn();
+
+    await auth.signIn();
+
     expect(source.request).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('surviving a page reload', () => {
+  test('a token outlives the object that fetched it', async () => {
+    const storage = memoryStorage();
+    const first = new GoogleAuth(sourceReturning(anHour), () => 0, storage);
+    await first.signIn();
+
+    // A reload builds everything again from scratch. Without this, every
+    // refresh would need a fresh sign-in — which is what made the popup appear.
+    const afterReload = new GoogleAuth(sourceReturning(anHour), () => 0, storage);
+
+    expect(afterReload.hasValidToken()).toBe(true);
+    expect(await afterReload.getAccessToken()).toBe('token-1');
+  });
+
+  test('an expired stored token is not trusted', async () => {
+    const storage = memoryStorage();
+    const first = new GoogleAuth(sourceReturning(anHour), () => 0, storage);
+    await first.signIn();
+
+    const later = new GoogleAuth(sourceReturning(anHour), () => 3_600_001, storage);
+
+    expect(later.hasValidToken()).toBe(false);
+  });
+
+  test('signing out clears the stored token too', async () => {
+    const storage = memoryStorage();
+    const auth = new GoogleAuth(sourceReturning(anHour), () => 0, storage);
+    await auth.signIn();
+
+    await auth.signOut();
+
+    expect(new GoogleAuth(sourceReturning(anHour), () => 0, storage).hasValidToken()).toBe(
+      false,
+    );
+  });
+
+  test('ignores stored junk rather than failing to start', async () => {
+    const storage = memoryStorage();
+    storage.setItem('marching-orders:token', 'not json');
+
+    expect(new GoogleAuth(sourceReturning(anHour), () => 0, storage).hasValidToken()).toBe(
+      false,
+    );
   });
 });

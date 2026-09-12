@@ -24,18 +24,18 @@ export function TripsScreen() {
     // The account recorded locally renders immediately and costs nothing.
     void app.loadAccount();
 
-    // Then try to reuse an existing Google session, silently. This shows
-    // nothing if there is no session — only the interactive fallback could
-    // produce a popup, and nothing on page load is allowed to reach it.
-    void auth.primeSilently().then((signedIn) => {
-      if (signedIn) return app.reconcileAccount();
-    });
+    // Only confirm with Drive when a token is already held. Google's token
+    // client opens a window for any request, so asking here would greet every
+    // page load with a consent popup.
+    if (auth.hasValidToken()) void app.reconcileAccount();
   }, [app, auth]);
 
   async function createTrip() {
     if (!name.trim()) return;
     setError(null);
     try {
+      // A click, so this is allowed to prompt if there is no token yet.
+      await auth.signIn();
       const folderId = await sync.createTrip(name.trim(), { startDate, endDate });
       await app.reconcileAccount();
       await app.loadTrips();

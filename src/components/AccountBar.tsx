@@ -33,6 +33,7 @@ export function AccountBar() {
       auth.switchAccount();
       await app.signOut();
       // Forces Google's chooser, then re-keys local data to whoever is picked.
+      await auth.signIn();
       await app.reconcileAccount();
     } catch {
       // A dismissed chooser leaves the app signed out, which is a coherent
@@ -84,7 +85,7 @@ export function AccountBar() {
           </p>
           <Button
             variant="ghost"
-            onClick={() => void app.reconcileAccount()}
+            onClick={() => void auth.signIn().then(() => app.reconcileAccount())}
             disabled={!state.online}
           >
             <LogIn className="size-4" aria-hidden />
