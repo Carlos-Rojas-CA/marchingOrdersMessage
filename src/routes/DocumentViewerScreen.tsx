@@ -76,7 +76,9 @@ export function DocumentViewerScreen() {
     .join(' · ');
 
   return (
-    <div className="flex min-h-full flex-col bg-bg">
+    // No column edges here on purpose: a document wants the whole screen, and
+    // a frame would only take width from the thing being scanned.
+    <div className="mx-auto flex min-h-full max-w-3xl flex-col bg-bg">
       <header className="pad-safe-top sticky top-0 z-10 border-b border-border bg-bg/95 backdrop-blur">
         <div className="flex items-center gap-2 px-3 py-2">
           <button

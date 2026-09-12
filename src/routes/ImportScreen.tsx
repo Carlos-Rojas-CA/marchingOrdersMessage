@@ -73,7 +73,7 @@ export function ImportScreen() {
   }
 
   return (
-    <div className="mx-auto flex min-h-full max-w-2xl flex-col">
+    <div className="mx-auto flex min-h-full max-w-2xl flex-col sm:border-x sm:border-border">
       <header className="pad-safe-top sticky top-0 z-10 flex items-center gap-2 border-b border-border bg-bg/90 px-3 py-2 backdrop-blur">
         <button
           type="button"

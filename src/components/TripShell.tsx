@@ -75,7 +75,7 @@ export function TripShell() {
   }, [app, auth, folderId]);
 
   return (
-    <div className="mx-auto flex min-h-full max-w-2xl flex-col">
+    <div className="mx-auto flex min-h-full max-w-2xl flex-col sm:border-x sm:border-border">
       <header className="pad-safe-top sticky top-0 z-10 border-b border-border bg-bg/90 backdrop-blur">
         <div className="flex items-center gap-2 px-3 py-2">
           <Link
@@ -143,21 +143,25 @@ export function TripShell() {
       </main>
 
       {trip?.canEdit ? (
-        <button
-          type="button"
-          onClick={() => setAdding(true)}
-          aria-label="Add to trip"
-          className="fixed right-4 bottom-20 z-20 flex size-14 items-center justify-center rounded-full bg-accent text-accent-contrast shadow-lg"
-        >
-          <Plus className="size-6" aria-hidden />
-        </button>
+        // Centred on the same column as the content: anchored to the viewport
+        // it sat alone in the corner of a wide screen, unrelated to anything.
+        <div className="pointer-events-none fixed inset-x-0 bottom-20 z-20 mx-auto flex max-w-2xl justify-end px-4">
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            aria-label="Add to trip"
+            className="pointer-events-auto flex size-14 items-center justify-center rounded-full bg-accent text-accent-contrast shadow-lg"
+          >
+            <Plus className="size-6" aria-hidden />
+          </button>
+        </div>
       ) : null}
 
       {adding ? (
         <AddSheet folderId={folderId} onClose={() => setAdding(false)} />
       ) : null}
 
-      <nav className="pad-safe-bottom fixed inset-x-0 bottom-0 z-10 mx-auto flex max-w-2xl border-t border-border bg-surface/95 backdrop-blur">
+      <nav className="pad-safe-bottom fixed inset-x-0 bottom-0 z-10 mx-auto flex max-w-2xl border-t border-border bg-surface/95 backdrop-blur sm:border-x">
         <TabLink to={`/trip/${folderId}`} end icon={Clock} label="Now" />
         <TabLink to={`/trip/${folderId}/timeline`} icon={CalendarDays} label="Timeline" />
         <TabLink to={`/trip/${folderId}/documents`} icon={FileText} label="Documents" />
