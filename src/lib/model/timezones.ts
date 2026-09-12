@@ -85,6 +85,36 @@ export function zonedIso(date: string, time: string, timeZone: string): string {
   return `${date}T${hhmm}:00${formatOffset(settled)}`;
 }
 
+/**
+ * Builds a stored timestamp from whatever a form managed to collect.
+ *
+ * This exists because the rule it enforces was got wrong three times in three
+ * different entry points: a date entered without a time was dropped, so the
+ * item recorded no timestamp at all and everything downstream — day grouping,
+ * gap detection, the route's start — behaved as though the date had never been
+ * typed. Each fix seeded a time at one more call site, and the next call site
+ * forgot again.
+ *
+ * So the guarantee lives here instead: **a date is never discarded**. Without a
+ * time, a stand-in hour is used, which is a far smaller lie than pretending the
+ * day was never given. A time with no date still records nothing, because a
+ * time alone says nothing about when something happens.
+ */
+export function timestampFrom({
+  date,
+  time,
+  timeZone,
+  defaultTime = '12:00',
+}: {
+  date?: string;
+  time?: string;
+  timeZone: string;
+  defaultTime?: string;
+}): string | undefined {
+  if (!date) return undefined;
+  return zonedIso(date, time || defaultTime, timeZone);
+}
+
 /** Human-checkable summary, e.g. `Central European Summer Time · +02:00`. */
 export function zoneLabel(timeZone: string, date: string): string {
   const offset = offsetFor(timeZone, date);

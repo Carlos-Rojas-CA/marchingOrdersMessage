@@ -518,3 +518,37 @@ describe('travel that needs no detail', () => {
     expect(screen.getByLabelText('Arrival date')).toBeInTheDocument();
   });
 });
+
+describe('a date is never lost, whatever the form did', () => {
+  test('clearing the suggested time still records the day', async () => {
+    const { itinerary } = await renderAt(`/trip/${FOLDER}/item/new?type=flight`);
+    const user = userEvent.setup();
+
+    await user.type(await screen.findByLabelText('Flight number'), 'UA 123');
+    await user.type(screen.getByLabelText('Departure date'), '2026-05-17');
+    // Deliberately emptied: the guarantee has to hold in the model, not rely
+    // on the field having been seeded.
+    await user.clear(screen.getByLabelText('Departure time'));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(async () => {
+      const [item] = (await itinerary()).items;
+      expect(item.startsAt).toMatch(/^2026-05-17T/);
+    });
+  });
+
+  test('a time with no date still records nothing', async () => {
+    const { itinerary } = await renderAt(`/trip/${FOLDER}/item/new?type=activity`);
+    const user = userEvent.setup();
+
+    await user.type(await screen.findByLabelText('What is it?'), 'Maybe the market');
+    await user.type(screen.getByLabelText('Starts time'), '09:00');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(async () => {
+      const [item] = (await itinerary()).items;
+      // It lands under Unscheduled, which is where a thing with no day belongs.
+      expect(item.startsAt).toBeUndefined();
+    });
+  });
+});

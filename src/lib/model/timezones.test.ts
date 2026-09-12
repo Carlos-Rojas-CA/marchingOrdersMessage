@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import {
   offsetFor,
+  timestampFrom,
   resolveTimeZone,
   placeFromAddress,
   searchPlaces,
@@ -210,5 +211,49 @@ describe('resolveTimeZone', () => {
     // You are in Rome on the morning of the 13th, whatever the Barcelona stay
     // says about that evening.
     expect(resolveTimeZone({ legs, date: '2026-05-13' })).toBe('Europe/Rome');
+  });
+});
+
+describe('timestampFrom', () => {
+  const zone = 'Europe/Rome';
+
+  test('uses the time when one was given', () => {
+    expect(timestampFrom({ date: '2026-05-09', time: '15:00', timeZone: zone })).toBe(
+      '2026-05-09T15:00:00+02:00',
+    );
+  });
+
+  test('keeps the date when no time was given', () => {
+    // The bug this exists to make impossible: a date entered on its own used
+    // to be discarded entirely, so a flight recorded no timestamp and every
+    // feature that reads one behaved as though it were not there.
+    expect(timestampFrom({ date: '2026-05-09', timeZone: zone })).toBe(
+      '2026-05-09T12:00:00+02:00',
+    );
+  });
+
+  test('takes a caller-chosen stand-in hour', () => {
+    expect(
+      timestampFrom({ date: '2026-05-09', timeZone: zone, defaultTime: '15:00' }),
+    ).toBe('2026-05-09T15:00:00+02:00');
+  });
+
+  test('records nothing when there is no date', () => {
+    // A time with no day says nothing about when something happens.
+    expect(timestampFrom({ timeZone: zone })).toBeUndefined();
+    expect(timestampFrom({ time: '15:00', timeZone: zone })).toBeUndefined();
+  });
+
+  test('treats blank strings as absent rather than as values', () => {
+    expect(timestampFrom({ date: '', time: '', timeZone: zone })).toBeUndefined();
+    expect(timestampFrom({ date: '2026-05-09', time: '', timeZone: zone })).toBe(
+      '2026-05-09T12:00:00+02:00',
+    );
+  });
+
+  test('still resolves the offset from the date it was given', () => {
+    expect(timestampFrom({ date: '2026-01-09', timeZone: zone })).toBe(
+      '2026-01-09T12:00:00+01:00',
+    );
   });
 });

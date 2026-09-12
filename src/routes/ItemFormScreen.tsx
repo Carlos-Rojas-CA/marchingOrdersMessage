@@ -5,7 +5,7 @@ import { useAppState, useServices } from '../hooks/useServices';
 import { useLoadedTrip } from '../hooks/useLoadedTrip';
 import { ITEM_TYPES, type ItemType } from '../lib/model/itinerary';
 import { legsFromStays } from '../lib/model/route';
-import { resolveTimeZone, zonedIso, type Place } from '../lib/model/timezones';
+import { resolveTimeZone, timestampFrom, type Place } from '../lib/model/timezones';
 import { searchPlaces } from '../lib/model/timezones';
 import { Button, ItemIcon } from '../components/ui';
 import {
@@ -232,13 +232,26 @@ export function ItemFormScreen() {
             }
           : undefined;
 
+      // Composed rather than built inline, so a date can never be dropped for
+      // want of a time. See timestampFrom.
+      const startsAt = timestampFrom({
+        date: startDate,
+        time: startTime,
+        timeZone: startZone,
+        defaultTime: isStay ? '15:00' : '12:00',
+      });
+      const endsAt = timestampFrom({
+        date: endDate,
+        time: endTime,
+        timeZone: endZone,
+        defaultTime: isStay ? '11:00' : '12:00',
+      });
+
       const patch = {
         type,
         title: title.trim() || TYPE_LABELS[type],
-        ...(startDate && startTime
-          ? { startsAt: zonedIso(startDate, startTime, startZone) }
-          : {}),
-        ...(endDate && endTime ? { endsAt: zonedIso(endDate, endTime, endZone) } : {}),
+        ...(startsAt ? { startsAt } : {}),
+        ...(endsAt ? { endsAt } : {}),
         ...(confirmation ? { confirmationNumber: confirmation } : {}),
         ...(notes ? { notes } : {}),
         ...(location ? { location } : {}),

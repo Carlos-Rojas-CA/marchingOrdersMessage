@@ -95,6 +95,8 @@ export function RouteScreen() {
     try {
       for (const stop of planned) {
         const zone = stop.timeZone ?? 'UTC';
+        // zonedIso directly rather than timestampFrom: both the day and the
+        // hour are known here, so there is no date that could be dropped.
         await sync.addItem(folderId, {
           type: 'lodging',
           title: `Stay in ${stop.place}`,
