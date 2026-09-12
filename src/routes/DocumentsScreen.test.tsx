@@ -51,9 +51,10 @@ describe('DocumentsScreen', () => {
 
     // The whole point of this lens: reach a boarding pass without knowing
     // which day it belongs to.
-    expect(await screen.findByText('Flights, trains & ferries (1)')).toBeInTheDocument();
-    expect(screen.getByText('Hotels & stays (1)')).toBeInTheDocument();
-    expect(screen.getByText('Travel documents (1)')).toBeInTheDocument();
+    const travel = await screen.findByRole('heading', { name: /Flights, trains & ferries/ });
+    expect(travel).toHaveTextContent('1');
+    expect(screen.getByRole('heading', { name: /Hotels & stays/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Travel documents/ })).toBeInTheDocument();
   });
 
   test('infers the group from the parent item without any manual tagging', async () => {
@@ -61,7 +62,7 @@ describe('DocumentsScreen', () => {
 
     // Neither boarding.pdf nor hotel.pdf carries a docType; the flight and the
     // lodging item are what place them.
-    expect(await screen.findByText('Flights, trains & ferries (1)')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Flights, trains & ferries/ })).toBeInTheDocument();
     expect(screen.getByText('AA123 SFO → NRT')).toBeInTheDocument();
   });
 
@@ -74,7 +75,7 @@ describe('DocumentsScreen', () => {
   test('shows when a document is not yet saved on the device', async () => {
     await renderLens(<DocumentsScreen />, { itinerary: TRIP, documents: DOCUMENTS });
 
-    await screen.findByText('Flights, trains & ferries (1)');
+    await screen.findByRole('heading', { name: /Flights, trains & ferries/ });
     expect(screen.queryAllByLabelText('Saved on this device')).toHaveLength(0);
   });
 

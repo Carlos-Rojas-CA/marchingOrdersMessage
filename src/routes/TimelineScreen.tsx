@@ -33,10 +33,10 @@ export function TimelineScreen() {
   }
 
   return (
-    <div className="space-y-6 pt-4">
+    <div className="space-y-5 pb-4">
       {grouped.days.map((day) => (
         <section key={day.date}>
-          <h2 className="sticky top-14 z-[1] -mx-3 bg-bg/95 px-3 py-1.5 text-xs font-semibold tracking-wide text-muted uppercase backdrop-blur">
+          <h2 className="day-rule sticky top-14 z-[1] -mx-3 border-b border-text/15 bg-bg/95 px-3 pt-3 pb-1.5 text-text backdrop-blur">
             {formatDayLabel(day.date)}
           </h2>
           {day.items.map((item) => (
@@ -47,7 +47,7 @@ export function TimelineScreen() {
 
       {grouped.unscheduled.length > 0 ? (
         <section>
-          <h2 className="mb-1 text-xs font-semibold tracking-wide text-muted uppercase">
+          <h2 className="day-rule mb-1 border-b border-text/15 pt-3 pb-1.5 text-muted">
             Unscheduled
           </h2>
           {grouped.unscheduled.map((item) => (

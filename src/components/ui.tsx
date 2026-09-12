@@ -60,6 +60,7 @@ export function Button({
     danger: 'bg-transparent text-danger hover:bg-surface-2',
   } as const;
 
+
   return (
     <button
       type={type}
@@ -112,7 +113,39 @@ const ITEM_ICONS: Record<ItemType, LucideIcon> = {
   document: FileText,
 };
 
-export function ItemIcon({ type, className }: { type: ItemType; className?: string }) {
+/**
+ * Tint by what kind of thing it is: getting somewhere, being somewhere, doing
+ * something. Three categories rather than nine, because the point is a glance
+ * down a column — more colours than that is a carnival, not a timetable.
+ */
+const ITEM_TINT: Record<ItemType, string> = {
+  flight: 'text-cat-travel',
+  train: 'text-cat-travel',
+  ferry: 'text-cat-travel',
+  bus: 'text-cat-travel',
+  car: 'text-cat-travel',
+  transit: 'text-cat-travel',
+  lodging: 'text-cat-stay',
+  activity: 'text-cat-doing',
+  poi: 'text-cat-doing',
+  note: 'text-cat-other',
+  document: 'text-cat-other',
+};
+
+export function ItemIcon({
+  type,
+  className,
+  tinted = true,
+}: {
+  type: ItemType;
+  className?: string;
+  tinted?: boolean;
+}) {
   const Icon = ITEM_ICONS[type];
-  return <Icon className={cn('size-5 shrink-0', className)} aria-hidden />;
+  return (
+    <Icon
+      className={cn('size-5 shrink-0', tinted && ITEM_TINT[type], className)}
+      aria-hidden
+    />
+  );
 }

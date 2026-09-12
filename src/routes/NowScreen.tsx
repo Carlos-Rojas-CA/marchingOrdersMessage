@@ -42,23 +42,32 @@ export function NowScreen() {
     <div className="space-y-6 pt-4">
       {view.current.length > 0 ? (
         <section>
-          <h2 className="mb-1 text-xs font-semibold tracking-wide text-muted uppercase">
+          {/*
+            The one place a hero treatment earns its keep. Everything else in
+            the app is a list to scan; this is the single thing that is true
+            right now, and amber is the colour every departure hall uses to
+            say exactly that.
+          */}
+          <h2 className="day-rule mb-2 flex items-center gap-2 text-live">
+            <span className="inline-block size-1.5 rounded-full bg-live" aria-hidden />
             Happening now
           </h2>
-          {view.current.map((item) => (
-            <ItemRow key={item.id} item={item} folderId={folderId} />
-          ))}
+          <div className="rounded-2xl border border-live/30 bg-live-bg px-3">
+            {view.current.map((item) => (
+              <ItemRow key={item.id} item={item} folderId={folderId} />
+            ))}
+          </div>
         </section>
       ) : null}
 
       {next.length > 0 ? (
         <section>
-          <h2 className="mb-1 text-xs font-semibold tracking-wide text-muted uppercase">
+          <h2 className="day-rule mb-1 border-b border-text/15 pb-1.5 text-muted">
             Next up
           </h2>
           {next.map((item) => (
             <div key={item.id}>
-              <p className="pt-2 text-xs text-muted">
+              <p className="tnum pt-3 text-xs text-muted">
                 {item.startsAt
                   ? `${formatDayLabel(item.startsAt.slice(0, 10))} · ${formatTimeOfDay(item.startsAt)}`
                   : null}

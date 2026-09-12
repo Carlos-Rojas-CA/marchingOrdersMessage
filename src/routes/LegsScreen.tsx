@@ -58,7 +58,7 @@ export function LegsScreen() {
             <div key={leg.itemId} className="flex flex-col gap-3">
               <Link to={`/trip/${folderId}/item/${leg.itemId}?type=lodging`}>
                 <Card>
-                  <p className="font-medium">
+                  <p className="text-lg font-semibold">
                     {leg.place}
                     <span className="font-normal text-muted">
                       {' · '}

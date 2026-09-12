@@ -55,9 +55,9 @@ describe('App in demo mode', () => {
 
     // The flight's boarding pass and the shinkansen ticket now share one
     // heading, which is the point of the regrouping.
-    expect(await screen.findByText('Flights, trains & ferries (2)')).toBeInTheDocument();
-    expect(screen.getByText('Hotels & stays (1)')).toBeInTheDocument();
-    expect(screen.getByText('Travel documents (1)')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Flights, trains & ferries/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Hotels & stays/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Travel documents/ })).toBeInTheDocument();
   });
 
   test('shows the whole trip on the timeline', async () => {

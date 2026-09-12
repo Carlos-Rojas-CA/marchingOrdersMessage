@@ -4,6 +4,22 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import './styles.css';
 
+/*
+ * Self-hosted so the app keeps its typography on a plane; the service worker
+ * caches them with everything else.
+ *
+ * Archivo for display and times — a signage grotesque. Barlow for everything
+ * else: drawn from California highway and transit lettering, which is exactly
+ * the job this app does. Read fast, one-handed, in bad light.
+ *
+ * Imported here rather than from the stylesheet so Vite emits the font files;
+ * see the note in styles.css.
+ */
+import '@fontsource-variable/archivo';
+import '@fontsource/barlow/400.css';
+import '@fontsource/barlow/500.css';
+import '@fontsource/barlow/600.css';
+
 /**
  * Asks the browser to treat this origin's storage as durable.
  *

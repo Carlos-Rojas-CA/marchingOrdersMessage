@@ -40,14 +40,16 @@ export function ItemRow({
         to={`/trip/${folderId}/item/${item.id}?type=${item.type}`}
         className="-mx-2 flex gap-3 rounded-xl px-2 py-3 hover:bg-surface-2"
       >
-        <span className="w-16 shrink-0 pt-0.5 text-sm tabular-nums text-muted">
-          {time || '—'}
-        </span>
+        <time className="w-[4.5rem] shrink-0 pt-px font-display text-[0.95rem] font-semibold text-text">
+          {time || <span className="text-muted">—</span>}
+        </time>
 
-        <ItemIcon type={item.type} className="mt-0.5 text-muted" />
+        <ItemIcon type={item.type} className="mt-0.5" />
 
         <span className="min-w-0 flex-1">
-          <span className="block font-medium break-words">{item.title}</span>
+          <span className="block leading-snug font-semibold break-words">
+            {item.title}
+          </span>
 
           {stay ? (
             // A stay is a span, and the half people forget is the checkout.

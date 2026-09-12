@@ -48,8 +48,11 @@ export function DocumentsScreen() {
       <div className="space-y-6">
         {groups.map((group) => (
           <section key={group.docType}>
-            <h2 className="mb-1 text-xs font-semibold tracking-wide text-muted uppercase">
-              {group.label} ({group.entries.length})
+            <h2 className="day-rule mb-1 flex items-baseline gap-2 border-b border-text/15 pb-1.5 text-text">
+              {group.label}
+              <span className="tnum font-sans text-xs font-normal tracking-normal text-muted">
+                {group.entries.length}
+              </span>
             </h2>
 
             <ul>

@@ -50,8 +50,8 @@ export function TripsScreen() {
 
   return (
     <div className="mx-auto max-w-2xl px-3 pb-10">
-      <header className="pad-safe-top flex items-center justify-between gap-2 py-4">
-        <h1 className="text-2xl font-semibold">Trips</h1>
+      <header className="pad-safe-top flex items-center justify-between gap-2 py-5">
+        <h1 className="text-3xl font-bold tracking-tight">Trips</h1>
         {!state.online ? (
           <span className="flex items-center gap-1 text-xs text-muted" role="status">
             <WifiOff className="size-3.5" aria-hidden />
@@ -89,7 +89,7 @@ export function TripsScreen() {
               className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-border bg-surface p-4 hover:bg-surface-2"
             >
               <span className="min-w-0 flex-1">
-                <span className="block truncate font-medium">{trip.name}</span>
+                <span className="block truncate text-lg font-semibold">{trip.name}</span>
                 <span className="block text-sm text-muted">
                   {trip.canEdit ? 'Editable' : 'View only'}
                   {trip.offlineEnabled ? ' · Saved offline' : ''}

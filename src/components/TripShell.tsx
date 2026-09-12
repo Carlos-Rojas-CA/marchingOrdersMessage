@@ -13,6 +13,7 @@ import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useAppState, useServices } from '../hooks/useServices';
 import { cn } from './ui';
+import { formatDayLabel } from '../lib/model/format';
 import { AddSheet } from './AddSheet';
 import { SyncBanner } from './SyncBanner';
 
@@ -39,7 +40,7 @@ function TabLink({
       end={end}
       className={({ isActive }) =>
         cn(
-          'flex flex-1 flex-col items-center gap-1 py-2 text-xs',
+          'flex flex-1 flex-col items-center gap-1 py-2 font-display text-[0.7rem] font-semibold tracking-wide',
           isActive ? 'text-accent' : 'text-muted',
         )
       }
@@ -56,6 +57,12 @@ export function TripShell() {
   const state = useAppState();
   const trip = state.current?.trip;
   const [adding, setAdding] = useState(false);
+
+  const doc = state.current?.doc;
+  const span =
+    doc?.startDate && doc.endDate
+      ? `${formatDayLabel(doc.startDate)} – ${formatDayLabel(doc.endDate)}`
+      : null;
 
   useEffect(() => {
     // Render from local storage first, then reconcile in the background. The
@@ -79,9 +86,12 @@ export function TripShell() {
             <ChevronLeft className="size-5" aria-hidden />
           </Link>
 
-          <h1 className="min-w-0 flex-1 truncate font-semibold">
-            {trip?.name ?? 'Trip'}
-          </h1>
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-lg leading-tight font-semibold">
+              {trip?.name ?? 'Trip'}
+            </h1>
+            {span ? <p className="tnum truncate text-xs text-muted">{span}</p> : null}
+          </div>
 
           {!state.online ? (
             <span
