@@ -1,0 +1,115 @@
+import { NavLink, Outlet, useParams } from 'react-router-dom';
+import { CalendarDays, ChevronLeft, Clock, FileText, RefreshCw, WifiOff } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useAppState, useServices } from '../hooks/useServices';
+import { cn } from './ui';
+
+/**
+ * Frame around the three lenses onto a trip.
+ *
+ * The lenses are a flat, always-visible choice rather than a menu: the whole
+ * point of Documents is that it is one tap away when you are standing at a gate.
+ */
+function TabLink({
+  to,
+  end,
+  icon: Icon,
+  label,
+}: {
+  to: string;
+  end?: boolean;
+  icon: typeof Clock;
+  label: string;
+}) {
+  return (
+    <NavLink
+      to={to}
+      end={end}
+      className={({ isActive }) =>
+        cn(
+          'flex flex-1 flex-col items-center gap-1 py-2 text-xs',
+          isActive ? 'text-accent' : 'text-muted',
+        )
+      }
+    >
+      <Icon className="size-5" aria-hidden />
+      {label}
+    </NavLink>
+  );
+}
+
+export function TripShell() {
+  const { folderId = '' } = useParams();
+  const { app } = useServices();
+  const state = useAppState();
+  const trip = state.current?.trip;
+
+  useEffect(() => {
+    // Render from local storage first, then reconcile in the background. The
+    // refresh is deliberately not awaited by anything the user can see.
+    void app.openTrip(folderId).then(() => app.refresh(folderId));
+  }, [app, folderId]);
+
+  return (
+    <div className="mx-auto flex min-h-full max-w-2xl flex-col">
+      <header className="pad-safe-top sticky top-0 z-10 border-b border-border bg-bg/90 backdrop-blur">
+        <div className="flex items-center gap-2 px-3 py-2">
+          <Link
+            to="/"
+            aria-label="All trips"
+            className="flex size-10 items-center justify-center rounded-lg text-muted hover:bg-surface-2"
+          >
+            <ChevronLeft className="size-5" aria-hidden />
+          </Link>
+
+          <h1 className="min-w-0 flex-1 truncate font-semibold">
+            {trip?.name ?? 'Trip'}
+          </h1>
+
+          {!state.online ? (
+            <span
+              className="flex items-center gap-1 rounded-lg bg-surface-2 px-2 py-1 text-xs text-muted"
+              role="status"
+            >
+              <WifiOff className="size-3.5" aria-hidden />
+              Offline
+            </span>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={() => void app.refresh(folderId)}
+            disabled={state.syncing || !state.online}
+            aria-label="Refresh from Drive"
+            className="flex size-10 items-center justify-center rounded-lg text-muted hover:bg-surface-2 disabled:opacity-40"
+          >
+            <RefreshCw className={cn('size-4', state.syncing && 'animate-spin')} aria-hidden />
+          </button>
+        </div>
+
+        {trip && !trip.canEdit ? (
+          <p className="border-t border-border px-3 py-1.5 text-xs text-muted">
+            You have view-only access to this trip.
+          </p>
+        ) : null}
+
+        {state.syncError && state.online ? (
+          <p className="border-t border-border px-3 py-1.5 text-xs text-warning">
+            Could not reach Drive: {state.syncError}. Showing saved data.
+          </p>
+        ) : null}
+      </header>
+
+      <main className="flex-1 px-3 pb-24">
+        <Outlet />
+      </main>
+
+      <nav className="pad-safe-bottom fixed inset-x-0 bottom-0 z-10 mx-auto flex max-w-2xl border-t border-border bg-surface/95 backdrop-blur">
+        <TabLink to={`/trip/${folderId}`} end icon={Clock} label="Now" />
+        <TabLink to={`/trip/${folderId}/timeline`} icon={CalendarDays} label="Timeline" />
+        <TabLink to={`/trip/${folderId}/documents`} icon={FileText} label="Documents" />
+      </nav>
+    </div>
+  );
+}

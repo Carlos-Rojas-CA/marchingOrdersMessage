@@ -146,3 +146,25 @@ describe('GoogleDriveClient error mapping', () => {
     await expect(client.listFolder('folder-1')).rejects.toThrow(/File not found: f9/);
   });
 });
+
+describe('GoogleDriveClient.createFolder', () => {
+  test('creates a Drive folder the app then owns outright', async () => {
+    const { client, calls } = clientWith([json({ id: 'folder-9', name: 'Japan 2026' })]);
+
+    await client.createFolder('Japan 2026');
+
+    // Creating the folder is what makes it reachable under the narrow
+    // drive.file scope without going through the Picker at all.
+    expect(calls[0]!.init.method).toBe('POST');
+    expect(JSON.parse(String(calls[0]!.init.body))).toMatchObject({
+      name: 'Japan 2026',
+      mimeType: 'application/vnd.google-apps.folder',
+    });
+  });
+
+  test('returns the created folder', async () => {
+    const { client } = clientWith([json({ id: 'folder-9', name: 'Japan 2026' })]);
+
+    expect((await client.createFolder('Japan 2026')).id).toBe('folder-9');
+  });
+});

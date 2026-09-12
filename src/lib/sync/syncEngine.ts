@@ -48,6 +48,38 @@ export class SyncEngine {
   ) {}
 
   /**
+   * Creates a new trip: a Drive folder plus an empty itinerary inside it.
+   *
+   * This is the one entry point that cannot be blocked by how `drive.file`
+   * grants work for picked folders — a folder the app created is always its
+   * own to read and write. Returns the folder id, which is the trip's identity
+   * everywhere else in the app.
+   */
+  async createTrip(name: string): Promise<string> {
+    const folder = await this.drive.createFolder(name);
+    const doc = parseItinerary({
+      schemaVersion: 1,
+      tripId: crypto.randomUUID(),
+      name,
+      updatedAt: new Date().toISOString(),
+      items: [],
+    });
+    const file = await this.drive.createJson(folder.id, ITINERARY_FILENAME, doc);
+
+    // Written locally straight away: the UI should be able to render the new
+    // trip without a round trip back through Drive.
+    await this.store.putItinerary({
+      folderId: folder.id,
+      doc,
+      driveModifiedTime: file.modifiedTime ?? null,
+      driveVersion: file.version ?? null,
+    });
+    await this.#recordTrip(folder.id, name, file, true);
+
+    return folder.id;
+  }
+
+  /**
    * Refreshes metadata for one trip.
    *
    * Costs one folder listing plus, at most, one small JSON download. Attachment

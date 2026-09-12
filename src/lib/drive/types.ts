@@ -30,6 +30,14 @@ export interface UploadRequest {
 export interface DriveClient {
   /** Every non-trashed file directly inside a folder, following pagination. */
   listFolder(folderId: string): Promise<DriveFile[]>;
+  /**
+   * Creates a trip folder.
+   *
+   * Worth its own method: a folder the app created is reachable under the
+   * narrow `drive.file` scope without the Picker, which makes "new trip" the
+   * one flow that cannot be blocked by how folder-picking grants turn out.
+   */
+  createFolder(name: string): Promise<DriveFile>;
   getFile(fileId: string): Promise<DriveFile>;
   downloadFile(fileId: string): Promise<Blob>;
   downloadText(fileId: string): Promise<string>;

@@ -276,3 +276,36 @@ describe('evictOffline', () => {
     expect((await store.getTrip('folder-1'))?.offlineEnabled).toBe(false);
   });
 });
+
+describe('createTrip', () => {
+  test('creates a folder and seeds an itinerary in it', async () => {
+    const folderId = await sync.createTrip('Japan 2026');
+
+    const files = await drive.listFolder(folderId);
+    expect(files.map((f) => f.name)).toEqual([ITINERARY_FILENAME]);
+  });
+
+  test('leaves the new trip immediately readable from the local store', async () => {
+    const folderId = await sync.createTrip('Japan 2026');
+
+    // Creating a trip must not require a round trip back through Drive before
+    // the UI can render it.
+    expect((await store.getItinerary(folderId))?.doc.name).toBe('Japan 2026');
+    expect((await store.getTrip(folderId))?.canEdit).toBe(true);
+  });
+
+  test('gives the itinerary a distinct trip id', async () => {
+    const first = await sync.createTrip('Trip A');
+    const second = await sync.createTrip('Trip B');
+
+    const a = (await store.getItinerary(first))!.doc.tripId;
+    const b = (await store.getItinerary(second))!.doc.tripId;
+    expect(a).not.toBe(b);
+  });
+
+  test('starts with no items rather than placeholder content', async () => {
+    const folderId = await sync.createTrip('Japan 2026');
+
+    expect((await store.getItinerary(folderId))?.doc.items).toEqual([]);
+  });
+});

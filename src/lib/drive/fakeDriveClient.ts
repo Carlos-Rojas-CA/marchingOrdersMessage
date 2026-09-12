@@ -91,6 +91,12 @@ export class FakeDriveClient implements DriveClient {
     this.#putJson(folderId, name, value);
   }
 
+  async createFolder(name: string): Promise<DriveFile> {
+    // Modelled as a zero-byte file in a synthetic root so that listing it as a
+    // parent behaves the same way a real Drive folder does.
+    return this.#put('__root__', name, 'application/vnd.google-apps.folder', new Blob([]), '');
+  }
+
   async listFolder(folderId: string): Promise<DriveFile[]> {
     return [...this.#files.values()]
       .filter((f) => f.folderId === folderId)

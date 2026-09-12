@@ -92,6 +92,20 @@ export class GoogleDriveClient implements DriveClient {
     return files;
   }
 
+  async createFolder(name: string): Promise<DriveFile> {
+    const url = new URL(`${API}/files`);
+    url.searchParams.set('fields', FILE_FIELDS);
+    const response = await this.#request(url.toString(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name,
+        mimeType: 'application/vnd.google-apps.folder',
+      }),
+    });
+    return (await response.json()) as DriveFile;
+  }
+
   async getFile(fileId: string): Promise<DriveFile> {
     const url = new URL(`${API}/files/${fileId}`);
     url.searchParams.set('fields', FILE_FIELDS);
