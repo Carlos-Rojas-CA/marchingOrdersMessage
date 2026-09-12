@@ -19,17 +19,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run typecheck
-      - run: npm test
+      # One command, identical to `npm run verify` locally, so there is no way
+      # to check a subset and believe it passed.
+      #
       # The client id comes from the committed .env. Passing an empty repo
       # variable here would override it and produce a build that cannot sign in.
-      - run: npm run build
-
-      # The point of the budget is that a regression fails the build rather
-      # than accumulating quietly. The PDF renderer is lazy, so only the
-      # entry chunk counts against it.
-      - name: Check initial bundle budget
-        run: node scripts/check-bundle-size.mjs
+      - run: npm run verify
 
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main'

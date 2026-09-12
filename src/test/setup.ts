@@ -42,3 +42,14 @@ if (!('IntersectionObserver' in window)) {
     value: StubObserver,
   });
 }
+
+/**
+ * jsdom has no layout, so it implements no scrolling either.
+ *
+ * Both the place field and the day strip scroll things into view — behaviour
+ * that only means anything with a real viewport, but which throws here
+ * without a stand-in.
+ */
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = function scrollIntoView() {};
+}
