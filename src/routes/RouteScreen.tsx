@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft, Minus, Plus, X } from 'lucide-react';
 import { useAppState, useServices } from '../hooks/useServices';
 import { useLoadedTrip } from '../hooks/useLoadedTrip';
-import { planRoute, type RouteStop } from '../lib/model/route';
+import { arrivalDate, planRoute, type RouteStop } from '../lib/model/route';
 import { zonedIso, type Place } from '../lib/model/timezones';
 import { formatDayLabel } from '../lib/model/format';
 import { Button, Card } from '../components/ui';
@@ -38,7 +38,8 @@ export function RouteScreen() {
   useLoadedTrip(folderId);
 
   const doc = state.current?.doc;
-  const start = doc?.startDate ?? '';
+  // Where the route begins is where you land, not where you take off.
+  const start = doc ? arrivalDate(doc) : '';
   const planned = useMemo(
     () => (start ? planRoute(start, stops) : []),
     [start, stops],
@@ -124,6 +125,12 @@ export function RouteScreen() {
         <p className="text-sm text-muted">
           Where are you going, and for how long? The dates are worked out for you.
         </p>
+
+        {start && doc?.startDate && start !== doc.startDate ? (
+          <p className="text-sm text-ok">
+            Starting from {formatDayLabel(start)}, the day your flight lands.
+          </p>
+        ) : null}
 
         {!start ? (
           <Card className="border-warning/40">

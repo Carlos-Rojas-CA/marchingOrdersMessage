@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'vitest';
-import { addDays, bedGaps, legsFromStays, planRoute, transitionGaps } from './route';
+import {
+  addDays,
+  arrivalDate,
+  bedGaps,
+  legsFromStays,
+  planRoute,
+  transitionGaps,
+} from './route';
 import { parseItinerary, type Itinerary } from './itinerary';
 
 function trip(fields: Record<string, unknown>): Itinerary {
@@ -368,5 +375,74 @@ describe('transitionGaps', () => {
     );
 
     expect(gaps).toEqual([]);
+  });
+});
+
+describe('arrivalDate', () => {
+  test('is when the first inbound journey lands, not when the trip starts', () => {
+    // A flight leaving on the 17th and landing on the 18th means the first
+    // night in a bed is the 18th. Basing the route on the trip's first day
+    // would put you in a hotel you were still flying towards.
+    const date = arrivalDate(
+      trip({
+        startDate: '2026-05-17',
+        endDate: '2026-05-30',
+        items: [
+          {
+            id: 'out',
+            type: 'flight',
+            title: 'LAX → Naples',
+            startsAt: '2026-05-17T16:00:00-07:00',
+            endsAt: '2026-05-18T14:30:00+02:00',
+          },
+        ],
+      }),
+    );
+
+    expect(date).toBe('2026-05-18');
+  });
+
+  test('falls back to the trip start when no journey has been recorded', () => {
+    expect(arrivalDate(trip({ startDate: '2026-05-08', items: [] }))).toBe('2026-05-08');
+  });
+
+  test('uses the trip start when the outbound lands the same day', () => {
+    const date = arrivalDate(
+      trip({
+        startDate: '2026-05-08',
+        items: [
+          {
+            id: 'out',
+            type: 'train',
+            title: 'Short hop',
+            startsAt: '2026-05-08T09:00:00+02:00',
+            endsAt: '2026-05-08T12:00:00+02:00',
+          },
+        ],
+      }),
+    );
+
+    expect(date).toBe('2026-05-08');
+  });
+
+  test('ignores journeys later in the trip', () => {
+    const date = arrivalDate(
+      trip({
+        startDate: '2026-05-08',
+        items: [
+          {
+            id: 'hop',
+            type: 'flight',
+            title: 'Mid-trip',
+            startsAt: '2026-05-15T20:00:00+02:00',
+            endsAt: '2026-05-16T08:00:00+02:00',
+          },
+        ],
+      }),
+    );
+
+    // Only a journey starting on the first day says when the trip really
+    // begins on the ground.
+    expect(date).toBe('2026-05-08');
   });
 });

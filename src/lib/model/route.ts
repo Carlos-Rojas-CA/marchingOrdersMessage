@@ -59,6 +59,29 @@ export function planRoute(startDate: string, stops: RouteStop[]): PlannedStop[] 
   return planned;
 }
 
+/**
+ * The first day the trip happens on the ground.
+ *
+ * A flight leaving on the 17th and landing on the 18th means the first night in
+ * a bed is the 18th; basing a route on the trip's own start date would put you
+ * in a hotel you were still flying towards. Only a journey starting on the
+ * first day counts — a mid-trip red-eye says nothing about when the trip began.
+ */
+export function arrivalDate(doc: Itinerary): string {
+  const start = doc.startDate;
+  if (!start) return '';
+
+  const outbound = liveItems(doc).find(
+    (item) =>
+      MOVES_YOU.has(item.type) &&
+      item.startsAt?.slice(0, 10) === start &&
+      item.endsAt &&
+      item.endsAt.slice(0, 10) > start,
+  );
+
+  return outbound?.endsAt?.slice(0, 10) ?? start;
+}
+
 export interface Leg {
   itemId: string;
   place: string;

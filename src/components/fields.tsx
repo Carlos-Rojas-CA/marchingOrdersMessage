@@ -96,17 +96,36 @@ export function PlaceField({
   value,
   onChange,
   placeholder = 'City or airport code',
+  fallbackZone,
+  fallbackLabel,
 }: {
   label: string;
   value: Place | null;
   onChange: (place: Place | null) => void;
   placeholder?: string;
+  /** Zone given to a name typed that matches nothing. See below. */
+  fallbackZone?: string;
+  /** Human name of that zone's place, shown so the inheritance is visible. */
+  fallbackLabel?: string;
 }) {
   const id = useId();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
 
   const matches = useMemo(() => (open ? searchPlaces(query) : []), [query, open]);
+
+  /**
+   * A place does two separate jobs: it labels somewhere, and it says what time
+   * it is there. Only the second needs to be in a list.
+   *
+   * Positano has no time zone of its own and appears in no reasonable list of
+   * cities, but it is plainly on Italian time — and the trip already knows
+   * that from where you are. So any name can be typed, and the zone comes from
+   * context rather than from the name being recognised.
+   */
+  const typed = query.trim();
+  const canUseTyped =
+    typed.length > 1 && !matches.some((m) => m.name.toLowerCase() === typed.toLowerCase());
 
   return (
     <div className="relative flex flex-col gap-1">
@@ -146,7 +165,7 @@ export function PlaceField({
         />
       )}
 
-      {open && matches.length > 0 ? (
+      {open && (matches.length > 0 || canUseTyped) ? (
         <ul className="absolute top-full right-0 left-0 z-20 mt-1 max-h-60 overflow-y-auto rounded-xl border border-border bg-surface shadow-lg">
           {matches.map((place) => (
             <li key={`${place.timeZone}:${place.name}`}>
@@ -170,6 +189,32 @@ export function PlaceField({
               </button>
             </li>
           ))}
+
+          {canUseTyped ? (
+            <li>
+              <button
+                type="button"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  onChange({
+                    name: typed,
+                    country: fallbackLabel ?? '',
+                    timeZone: fallbackZone ?? 'UTC',
+                  });
+                  setQuery('');
+                  setOpen(false);
+                }}
+                className="flex min-h-11 w-full items-center gap-2 border-t border-border px-3 text-left hover:bg-surface-2"
+              >
+                <span className="min-w-0 flex-1 truncate">Use “{typed}”</span>
+                {fallbackZone ? (
+                  <span className="shrink-0 text-sm text-muted">
+                    {fallbackLabel ?? fallbackZone.split('/').pop()?.replace(/_/g, ' ')} time
+                  </span>
+                ) : null}
+              </button>
+            </li>
+          ) : null}
         </ul>
       ) : null}
     </div>

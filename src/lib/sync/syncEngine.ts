@@ -55,6 +55,36 @@ export class SyncEngine {
     private readonly store: TripStore,
   ) {}
 
+  /** One chain of pending work per trip. See `#serial`. */
+  #queues = new Map<string, Promise<unknown>>();
+
+  /**
+   * Runs work for one trip strictly after anything already running for it.
+   *
+   * Every write is a read-modify-write against a Drive revision, so two of them
+   * overlapping means the second checks a revision the first has already
+   * superseded and reports a conflict that never happened. Double-tapping save
+   * is enough to cause it, and so is saving while a background refresh is still
+   * in flight.
+   *
+   * Serialising here rather than retrying on conflict keeps the conflict error
+   * meaningful: after this, it can only mean a genuine second writer.
+   */
+  async #serial<T>(folderId: string, work: () => Promise<T>): Promise<T> {
+    const previous = this.#queues.get(folderId) ?? Promise.resolve();
+    // Failures must not poison the queue for everything behind them.
+    const mine = previous.catch(() => {}).then(work);
+    const settled = mine.catch(() => {});
+
+    this.#queues.set(folderId, settled);
+    void settled.then(() => {
+      // Drop the entry only if nothing queued behind this one.
+      if (this.#queues.get(folderId) === settled) this.#queues.delete(folderId);
+    });
+
+    return await mine;
+  }
+
   /** Who the current credentials belong to. */
   async currentUser() {
     return await this.drive.getCurrentUser();
@@ -105,6 +135,10 @@ export class SyncEngine {
    * enough to run on an app open over a roaming connection.
    */
   async pull(folderId: string): Promise<PullResult> {
+    return await this.#serial(folderId, () => this.#pull(folderId));
+  }
+
+  async #pull(folderId: string): Promise<PullResult> {
     const files = await this.drive.listFolder(folderId);
     const itineraryFile = files.find((f) => f.name === ITINERARY_FILENAME);
     const canEdit = itineraryFile?.capabilities?.canEdit ?? true;
@@ -198,6 +232,10 @@ export class SyncEngine {
    * the other party's data beats preserving ours.
    */
   async push(folderId: string, doc: Itinerary): Promise<void> {
+    return await this.#serial(folderId, () => this.#push(folderId, doc));
+  }
+
+  async #push(folderId: string, doc: Itinerary): Promise<void> {
     const trip = await this.store.getTrip(folderId);
     const cached = await this.store.getItinerary(folderId);
     if (!trip?.itineraryFileId) {
@@ -229,13 +267,18 @@ export class SyncEngine {
     folderId: string,
     change: (items: ItineraryItem[]) => ItineraryItem[],
   ): Promise<void> {
-    const record = await this.store.getItinerary(folderId);
-    if (!record) throw new Error(`Trip ${folderId} is not loaded`);
+    // The whole read-modify-write runs as one queued unit: reading the current
+    // items and writing them back must not be separable, or two edits could
+    // both read the same state and one would be lost.
+    await this.#serial(folderId, async () => {
+      const record = await this.store.getItinerary(folderId);
+      if (!record) throw new Error(`Trip ${folderId} is not loaded`);
 
-    await this.push(folderId, {
-      ...record.doc,
-      items: change(record.doc.items),
-      updatedAt: new Date().toISOString(),
+      await this.#push(folderId, {
+        ...record.doc,
+        items: change(record.doc.items),
+        updatedAt: new Date().toISOString(),
+      });
     });
   }
 
@@ -302,14 +345,17 @@ export class SyncEngine {
     file: File,
     options: { docType?: DocType; label?: string } = {},
   ): Promise<void> {
-    const record = await this.store.getItinerary(folderId);
-    if (!record) throw new Error(`Trip ${folderId} is not loaded`);
+    const existing = await this.store.getItinerary(folderId);
+    if (!existing) throw new Error(`Trip ${folderId} is not loaded`);
 
-    const item = itemId === null ? null : record.doc.items.find((i) => i.id === itemId);
+    const item = itemId === null ? null : existing.doc.items.find((i) => i.id === itemId);
     if (itemId !== null && !item) {
       throw new Error(`No item "${itemId}" in this trip`);
     }
 
+    // Uploaded before taking the lock: the bytes can be large, and holding up
+    // every other operation on the trip for the duration would be worse than
+    // the small chance of the upload succeeding and the write failing.
     const uploaded = await this.drive.uploadFile({
       folderId,
       name: file.name,
@@ -330,24 +376,32 @@ export class SyncEngine {
     };
 
     const now = new Date().toISOString();
-    const doc: Itinerary =
-      item === null
-        ? { ...record.doc, attachments: [...record.doc.attachments, attachment], updatedAt: now }
-        : {
-            ...record.doc,
-            updatedAt: now,
-            items: record.doc.items.map((candidate) =>
-              candidate.id === itemId
-                ? {
-                    ...candidate,
-                    attachments: [...candidate.attachments, attachment],
-                    updatedAt: now,
-                  }
-                : candidate,
-            ),
-          };
 
-    await this.push(folderId, doc);
+    if (item === null) {
+      // Trip-level attachment: re-read inside the lock so a concurrent edit is
+      // not overwritten by state captured before the upload began.
+      await this.#serial(folderId, async () => {
+        const current = await this.store.getItinerary(folderId);
+        if (!current) throw new Error(`Trip ${folderId} is not loaded`);
+        await this.#push(folderId, {
+          ...current.doc,
+          attachments: [...current.doc.attachments, attachment],
+          updatedAt: now,
+        });
+      });
+    } else {
+      await this.#mutateItems(folderId, (items) =>
+        items.map((candidate) =>
+          candidate.id === itemId
+            ? {
+                ...candidate,
+                attachments: [...candidate.attachments, attachment],
+                updatedAt: now,
+              }
+            : candidate,
+        ),
+      );
+    }
 
     // The bytes are already in hand, so cache them rather than making the user
     // download what they just uploaded.

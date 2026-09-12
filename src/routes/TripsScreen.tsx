@@ -38,9 +38,9 @@ export function TripsScreen() {
       const folderId = await sync.createTrip(name.trim(), { startDate, endDate });
       await app.reconcileAccount();
       await app.loadTrips();
-      // Straight into sketching the route: a brand new trip has nothing to
-      // show on its day view, and this is the question that comes next.
-      navigate(`/trip/${folderId}/route`);
+      // Flights before the route: the route is dated from when you land, and
+      // an overnight flight means that is not the day you set off.
+      navigate(`/trip/${folderId}/item/new?type=flight&outbound=1`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not create the trip.');
     }

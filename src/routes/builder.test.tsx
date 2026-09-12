@@ -194,3 +194,59 @@ describe('the legs screen', () => {
     ).toBeInTheDocument();
   });
 });
+
+describe('a place that is not in the list', () => {
+  test('accepts a typed name and gives it the zone of where you already are', async () => {
+    // Positano has no time zone of its own and is in no list of cities. It is
+    // still somewhere people stay, and it is plainly on Italian time.
+    const { itinerary } = await renderAt(`/trip/${FOLDER}/item/new?type=lodging`, [
+      stay('Naples', '2026-05-08', '2026-05-12'),
+    ]);
+    const user = userEvent.setup();
+
+    await user.type(await screen.findByLabelText('Hotel or rental name'), 'Le Sirenuse');
+    await user.type(screen.getByLabelText('City'), 'Positano');
+    await user.click(await screen.findByRole('button', { name: /Use “Positano”/ }));
+    await user.type(screen.getByLabelText('Check in date'), '2026-05-12');
+    await user.type(screen.getByLabelText('Check in time'), '15:00');
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(async () => {
+      const added = (await itinerary()).items.find(
+        (i: { title: string }) => i.title === 'Le Sirenuse',
+      );
+      expect(added.location.city).toBe('Positano');
+      // Inherited from the Naples leg rather than asked for.
+      expect(added.startsAt).toBe('2026-05-12T15:00:00+02:00');
+    });
+  });
+
+  test('names where the zone came from, so a wrong one is visible', async () => {
+    await renderAt(`/trip/${FOLDER}/item/new?type=lodging`, [
+      stay('Naples', '2026-05-08', '2026-05-12'),
+    ]);
+    const user = userEvent.setup();
+
+    // A date first: that is what lets the trip say where you already are.
+    await user.type(await screen.findByLabelText('Check in date'), '2026-05-10');
+    await user.type(screen.getByLabelText('City'), 'Positano');
+
+    // "Naples time" rather than "Europe/Rome" — the place the traveller
+    // recognises, not the zone identifier behind it.
+    expect(
+      await screen.findByRole('button', { name: /Use “Positano”.*Naples/ }),
+    ).toBeInTheDocument();
+  });
+
+  test('still prefers a real match when there is one', async () => {
+    await renderAt(`/trip/${FOLDER}/item/new?type=lodging`);
+    const user = userEvent.setup();
+
+    await user.type(await screen.findByLabelText('City'), 'Naples');
+    const options = await screen.findAllByRole('button', { name: /Naples/ });
+
+    // The known city leads; the free-text escape hatch sits underneath it.
+    expect(options[0]).toHaveTextContent('Italy');
+  });
+});

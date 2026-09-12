@@ -601,3 +601,74 @@ describe('createTrip with dates', () => {
     expect((await store.getItinerary(folderId))!.doc.startDate).toBeUndefined();
   });
 });
+
+describe('concurrent operations on one trip', () => {
+  async function seeded() {
+    drive.seedJson('folder-1', ITINERARY_FILENAME, {
+      schemaVersion: 1,
+      tripId: 't1',
+      name: 'Europe 2026',
+      items: [],
+    });
+    await sync.pull('folder-1');
+    return 'folder-1';
+  }
+
+  const item = { type: 'lodging' as const, title: 'Stay in Rome' };
+
+  test('a refresh landing after a write does not cause a false conflict', async () => {
+    const folderId = await seeded();
+
+    // A refresh already in flight when the write starts — exactly what happens
+    // when a screen mounts and you save before its background pull returns.
+    let releasePull: () => void = () => {};
+    const held = new Promise<void>((resolve) => {
+      releasePull = resolve;
+    });
+    const realList = drive.listFolder.bind(drive);
+    vi.spyOn(drive, 'listFolder').mockImplementation(async (id) => {
+      await held;
+      return await realList(id);
+    });
+
+    const refreshing = sync.pull(folderId);
+    const writing = sync.addItem(folderId, item);
+    releasePull();
+    await Promise.all([refreshing, writing]);
+
+    // The stale revision the slow pull carried must not have been written back
+    // over the newer one the save produced.
+    await expect(sync.addItem(folderId, item)).resolves.toBeTruthy();
+  });
+
+  test('writes queued together all land', async () => {
+    const folderId = await seeded();
+
+    // The route sketch saves one stay per stop, back to back.
+    await Promise.all([
+      sync.addItem(folderId, { ...item, title: 'Rome' }),
+      sync.addItem(folderId, { ...item, title: 'Barcelona' }),
+      sync.addItem(folderId, { ...item, title: 'Paris' }),
+    ]);
+
+    const titles = (await store.getItinerary(folderId))!.doc.items.map((i) => i.title);
+    expect(titles.sort()).toEqual(['Barcelona', 'Paris', 'Rome']);
+  });
+
+  test('still reports a conflict when someone else really did write', async () => {
+    const folderId = await seeded();
+    const file = (await drive.listFolder(folderId)).find(
+      (f) => f.name === ITINERARY_FILENAME,
+    )!;
+
+    await drive.writeBehindOurBack(file.id, {
+      schemaVersion: 1,
+      tripId: 't1',
+      name: 'Their edit',
+      items: [],
+    });
+
+    // Serialising our own work must not blind us to a genuine second writer.
+    await expect(sync.addItem(folderId, item)).rejects.toBeInstanceOf(ConflictError);
+  });
+});

@@ -62,6 +62,8 @@ export function ItemFormScreen() {
   const type = (params.get('type') ?? 'activity') as ItemType;
   const isJourney = JOURNEYS.includes(type);
   const isStay = type === 'lodging';
+  /** Part of first-run setup, where a rough flight is worth more than none. */
+  const isOutbound = params.get('outbound') === '1';
 
   const doc = state.current?.doc;
   const existing = itemId ? doc?.items.find((i) => i.id === itemId) : undefined;
@@ -100,6 +102,19 @@ export function ItemFormScreen() {
       if (match) setToPlace(match);
     }
   }, [existing]);
+
+  /**
+   * The zone a name typed into a place field would inherit — where the trip
+   * already says you are on this date, or the last place you used.
+   */
+  const contextZone = resolveTimeZone({
+    legs,
+    date: startDate,
+    lastUsed: lastPlace()?.timeZone,
+  });
+  const contextLabel =
+    legs.find((l) => startDate >= l.arrive && startDate <= l.depart)?.place ??
+    lastPlace()?.name;
 
   /** The zone each end of the item resolves to, following the agreed order. */
   const startZone = resolveTimeZone({
@@ -151,7 +166,9 @@ export function ItemFormScreen() {
 
       if (place) rememberPlace(place);
       await app.openTrip(folderId);
-      navigate(-1);
+      // Setup continues into the route, which is now dated from this arrival.
+      if (isOutbound) navigate(`/trip/${folderId}/route`);
+      else navigate(-1);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not save that.');
     } finally {
@@ -185,10 +202,28 @@ export function ItemFormScreen() {
           <ChevronLeft className="size-5" aria-hidden />
         </button>
         <ItemIcon type={type} className="text-muted" />
-        <h1 className="flex-1 truncate font-semibold">{heading}</h1>
+        <h1 className="flex-1 truncate font-semibold">
+          {isOutbound ? 'Flight out' : heading}
+        </h1>
+        {isOutbound ? (
+          <button
+            type="button"
+            onClick={() => navigate(`/trip/${folderId}/route`)}
+            className="min-h-10 rounded-lg px-2 text-sm text-muted hover:bg-surface-2"
+          >
+            Skip
+          </button>
+        ) : null}
       </header>
 
       <main className="flex flex-1 flex-col gap-4 p-3">
+        {isOutbound ? (
+          <p className="text-sm text-muted">
+            Rough is fine — where you are flying to and roughly when you land is
+            enough to lay out the trip. Come back and add the flight number and
+            confirmation once you have booked.
+          </p>
+        ) : null}
         <TextField
           label={isStay ? 'Hotel or rental name' : isJourney ? 'Flight or service number' : 'What is it?'}
           value={title}
@@ -201,7 +236,13 @@ export function ItemFormScreen() {
 
         {isJourney ? (
           <>
-            <PlaceField label="Departs from" value={fromPlace} onChange={setFromPlace} />
+            <PlaceField
+              label="Departs from"
+              value={fromPlace}
+              onChange={setFromPlace}
+              fallbackZone={contextZone}
+              fallbackLabel={contextLabel}
+            />
             <DateTimeField
               label="Departure"
               date={startDate}
@@ -210,7 +251,13 @@ export function ItemFormScreen() {
               onDateChange={setStartDate}
               onTimeChange={setStartTime}
             />
-            <PlaceField label="Arrives at" value={toPlace} onChange={setToPlace} />
+            <PlaceField
+              label="Arrives at"
+              value={toPlace}
+              onChange={setToPlace}
+              fallbackZone={contextZone}
+              fallbackLabel={contextLabel}
+            />
             <DateTimeField
               label="Arrival"
               date={endDate}
@@ -226,6 +273,8 @@ export function ItemFormScreen() {
               label={isStay ? 'City' : 'Where'}
               value={toPlace}
               onChange={setToPlace}
+              fallbackZone={contextZone}
+              fallbackLabel={contextLabel}
             />
             <DateTimeField
               label={isStay ? 'Check in' : 'Starts'}
@@ -275,7 +324,7 @@ export function ItemFormScreen() {
 
         <div className="flex gap-2">
           <Button onClick={() => void save()} disabled={saving || !state.online}>
-            {saving ? 'Saving…' : 'Save'}
+            {saving ? 'Saving…' : isOutbound ? 'Save and continue' : 'Save'}
           </Button>
           {itemId ? (
             <Button variant="danger" onClick={() => void remove()} disabled={saving}>
