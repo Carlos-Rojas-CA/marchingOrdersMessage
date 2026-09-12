@@ -154,7 +154,7 @@ export function RouteScreen() {
             type="date"
             value={start}
             onChange={(event) => setStartOverride(event.target.value)}
-            className="min-h-11 rounded-xl border border-border bg-bg px-3 outline-none focus:border-accent"
+            className="min-h-11 w-full min-w-0 rounded-xl border border-border bg-bg px-3 outline-none focus:border-accent"
           />
           {!startOverride && derivedStart && doc?.startDate &&
           derivedStart !== doc.startDate ? (
@@ -196,7 +196,7 @@ export function RouteScreen() {
                     type="date"
                     value={stop.arrive}
                     onChange={(event) => pinArrival(stops[index]!.key, event.target.value)}
-                    className="mt-1 min-h-9 rounded-lg border border-border bg-bg px-2 text-sm outline-none focus:border-accent"
+                    className="mt-1 min-h-9 w-full min-w-0 rounded-lg border border-border bg-bg px-2 text-sm outline-none focus:border-accent"
                   />
                 </div>
 

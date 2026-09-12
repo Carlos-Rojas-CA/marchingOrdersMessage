@@ -133,7 +133,7 @@ export function TripsScreen() {
                   type="date"
                   value={startDate}
                   onChange={(event) => setStartDate(event.target.value)}
-                  className="min-h-11 rounded-xl border border-border bg-bg px-3 outline-none focus:border-accent"
+                  className="min-h-11 w-full min-w-0 rounded-xl border border-border bg-bg px-3 outline-none focus:border-accent"
                 />
               </div>
               <div className="flex flex-col gap-1">
@@ -146,7 +146,7 @@ export function TripsScreen() {
                   value={endDate}
                   min={startDate || undefined}
                   onChange={(event) => setEndDate(event.target.value)}
-                  className="min-h-11 rounded-xl border border-border bg-bg px-3 outline-none focus:border-accent"
+                  className="min-h-11 w-full min-w-0 rounded-xl border border-border bg-bg px-3 outline-none focus:border-accent"
                 />
               </div>
             </div>

@@ -57,12 +57,12 @@ export function ItemRow({
             // than four loose pieces of text.
             <dl className="mt-0.5 grid grid-cols-[auto_1fr] gap-x-2 text-sm text-muted">
               <dt>Check in</dt>
-              <dd className="text-text">
+              <dd className="min-w-0 text-text">
                 {formatDayLabel(item.startsAt!.slice(0, 10))} ·{' '}
                 {formatTimeOfDay(item.startsAt)}
               </dd>
               <dt>Check out</dt>
-              <dd className="text-text">
+              <dd className="min-w-0 text-text">
                 {formatDayLabel(item.endsAt!.slice(0, 10))} ·{' '}
                 {formatTimeOfDay(item.endsAt)}
               </dd>

@@ -152,6 +152,48 @@ time,
   text-transform: uppercase;
 }
 
+/*
+ * Form controls must be allowed to shrink.
+ *
+ * A grid or flex child defaults to min-width:auto, which means it refuses to
+ * go narrower than its intrinsic width. Native date and time inputs on iOS
+ * carry a very wide intrinsic minimum, so a two-column row of them pushed the
+ * whole page sideways and cropped the right-hand field off the screen.
+ *
+ * Set here rather than on each field: every input inside a flex or grid
+ * container has this hazard, and remembering it at each call site is exactly
+ * how it came back.
+ */
+input,
+textarea,
+select {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/*
+ * Nothing may scroll the page sideways. A form field that outgrows its column
+ * is a bug to fix, not a reason to let the whole layout drift.
+ */
+body {
+  overflow-x: clip;
+}
+
+/*
+ * Keeps a field clear of the sticky header when anything scrolls it into view.
+ *
+ * Applied unconditionally rather than on :focus-visible, because the case that
+ * actually bit was an autofocused first field on iOS — programmatic focus that
+ * never matches :focus-visible, and which left the input half-hidden behind
+ * the header it had scrolled underneath.
+ */
+input,
+textarea,
+select {
+  scroll-margin-top: 5.5rem;
+  scroll-margin-bottom: 5.5rem;
+}
+
 /* Respect the notch and the home indicator without hard-coding device sizes. */
 .pad-safe-top {
   padding-top: env(safe-area-inset-top);

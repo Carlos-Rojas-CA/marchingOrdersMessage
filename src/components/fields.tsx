@@ -27,7 +27,7 @@ export function Field({
 }
 
 const inputClass =
-  'min-h-11 w-full rounded-xl border border-border bg-bg px-3 outline-none focus:border-accent';
+  'min-h-11 w-full min-w-0 rounded-xl border border-border bg-bg px-3 outline-none focus:border-accent';
 
 export function TextField({
   label,
