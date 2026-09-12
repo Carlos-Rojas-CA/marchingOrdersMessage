@@ -121,10 +121,18 @@ export function ItemRow({
         />
       </Link>
 
+      {/*
+        The tile's row is always present even when empty: it carries the card's
+        bottom padding, and hiding it left a chipless tile with none at all.
+        Its left inset clears the icon so chips line up with the title rather
+        than with the card edge.
+
+        A row has its padding on the link instead, so an empty one can vanish.
+      */}
       <div
         className={
           tile
-            ? 'flex flex-wrap items-center gap-2 px-3 empty:hidden [&:not(:empty)]:pb-3'
+            ? 'flex flex-wrap items-center gap-2 pr-3 pb-3 pl-11 [&:not(:empty)]:pt-2'
             : 'flex flex-wrap items-center gap-2 pl-[4.75rem] empty:hidden [&:not(:empty)]:pb-3'
         }
       >

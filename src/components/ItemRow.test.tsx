@@ -469,3 +469,56 @@ describe('the timeline day strip', () => {
     expect(screen.queryByRole('button', { name: /^Show/ })).not.toBeInTheDocument();
   });
 });
+
+describe('a tile with nothing attached', () => {
+  const oneTrain = {
+    schemaVersion: 1,
+    tripId: 't1',
+    name: 'Italy 2026',
+    startDate: '2026-09-23',
+    endDate: '2026-09-24',
+    items: [
+      {
+        id: 'train',
+        type: 'train',
+        title: 'Train',
+        startsAt: '2026-09-23T12:00:00+02:00',
+        attachments: [],
+      },
+    ],
+  };
+
+  test('keeps the row that carries the card’s bottom padding', async () => {
+    await renderLens(<TimelineScreen />, { itinerary: oneTrain });
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Show Wed, Sep 23' }));
+
+    // Hiding this row when empty left a chipless tile with no bottom padding
+    // at all, so the title sat against the card edge.
+    const card = (await screen.findByText('Train')).closest('div.rounded-2xl')!;
+    const chips = card.querySelector('.pb-3');
+    expect(chips).not.toBeNull();
+  });
+
+  test('lines chips up with the title rather than the card edge', async () => {
+    await renderLens(<TimelineScreen />, {
+      itinerary: {
+        ...oneTrain,
+        items: [
+          {
+            ...oneTrain.items[0],
+            location: { name: 'Napoli Centrale', address: 'Piazza Garibaldi, Napoli' },
+          },
+        ],
+      },
+    });
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Show Wed, Sep 23' }));
+
+    const directions = await screen.findByRole('link', { name: /Directions/ });
+    // Indented past the icon, which is where the title starts.
+    expect(directions.parentElement?.className).toContain('pl-11');
+  });
+});
