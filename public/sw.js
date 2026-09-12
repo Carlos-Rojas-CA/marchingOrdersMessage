@@ -35,9 +35,16 @@ self.addEventListener('install', (event) => {
           }
         }),
       );
-      await self.skipWaiting();
+      // Deliberately *not* skipWaiting here. Activating immediately would swap
+      // the assets underneath a page that is already running, which breaks lazy
+      // chunks mid-navigation. The new worker waits until the app asks, which
+      // it does only when the user accepts the update.
     })(),
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data === 'apply-update') void self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {

@@ -16,6 +16,7 @@ import { cn } from './ui';
 import { formatDayLabel } from '../lib/model/format';
 import { AddSheet } from './AddSheet';
 import { SyncBanner } from './SyncBanner';
+import { UpdateBanner } from './UpdateBanner';
 
 /**
  * Frame around the three lenses onto a trip.
@@ -137,6 +138,7 @@ export function TripShell() {
 
       <main className="flex-1 px-3 pb-24">
         <div className="pt-3">
+          <UpdateBanner />
           <SyncBanner folderId={folderId} />
         </div>
         <Outlet />

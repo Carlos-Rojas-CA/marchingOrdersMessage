@@ -4,10 +4,10 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
 
-// Published at https://carlos-rojas-ca.github.io/MarchingOrdersMessage/, so
+// Published at https://carlos-rojas-ca.github.io/marchingOrdersMessage/, so
 // every asset URL and the service worker scope hang off this prefix. Overridable
 // for local preview and for anyone hosting it elsewhere.
-const base = process.env.BASE_PATH ?? '/MarchingOrdersMessage/';
+const base = process.env.BASE_PATH ?? '/marchingOrdersMessage/';
 
 export default defineConfig({
   base,

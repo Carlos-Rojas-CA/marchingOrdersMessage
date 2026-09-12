@@ -499,9 +499,9 @@ may never be built.
 
 ## 14. Hosting and repository
 
-- **Repository:** `Carlos-Rojas-CA/MarchingOrdersMessage`, separate from
+- **Repository:** `Carlos-Rojas-CA/marchingOrdersMessage`, separate from
   `Carlos-Rojas-CA.github.io`, published to
-  `carlos-rojas-ca.github.io/MarchingOrdersMessage/`. Independent deploys and
+  `carlos-rojas-ca.github.io/marchingOrdersMessage/`. Independent deploys and
   history.
 - **Public is correct and free.** GitHub Pages from a private repo requires a
   paid plan, and there is nothing to hide: the OAuth client ID is public by
