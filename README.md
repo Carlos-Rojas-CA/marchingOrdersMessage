@@ -69,6 +69,24 @@ npm run typecheck
 npm run build
 ```
 
+## Adding a trip
+
+Create the trip, then open **Timeline → Paste an itinerary** and paste the trip
+as JSON. It is validated before anything is written, so a bad paste cannot
+damage a trip that already exists. Attach PDFs afterwards with **Add** on any
+item; passports and insurance attach to the trip itself.
+
+A worked example converted from a real Google Doc lives at
+[`docs/examples/japan-2023.json`](docs/examples/japan-2023.json) — flights,
+hotels with phone numbers, and the full day-by-day.
+
+The rule that matters: **write every time as it appears on the ticket, tagged
+with that place's offset** (`-07:00` leaving San Diego, `+02:00` arriving in
+Italy). Nothing is ever converted, so a 6:00 PM check-in in Rome reads 6:00 PM
+regardless of where the phone thinks it is. A flight carries both — departure in
+the origin's time, arrival in the destination's — and files under the day it
+leaves.
+
 ## Configuration
 
 The OAuth client id lives in the committed `.env`. Nothing else is needed to

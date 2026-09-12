@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { FileText, MapPin } from 'lucide-react';
+import { FileText, MapPin, Phone } from 'lucide-react';
 import type { ItineraryItem } from '../lib/model/itinerary';
 import { formatTimeOfDay } from '../lib/model/format';
 import { ItemIcon } from './ui';
@@ -57,6 +57,16 @@ export function ItemRow({
                 <span className="break-words">
                   {item.location.address || item.location.name}
                 </span>
+              </a>
+            ) : null}
+
+            {item.location?.phone ? (
+              <a
+                href={`tel:${item.location.phone}`}
+                className="mt-1 flex items-center gap-1 text-sm text-muted underline-offset-2 hover:underline"
+              >
+                <Phone className="size-3.5 shrink-0" aria-hidden />
+                {item.location.phone}
               </a>
             ) : null}
 

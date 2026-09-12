@@ -54,6 +54,8 @@ const attachmentSchema = z.looseObject({
 const locationSchema = z.looseObject({
   name: z.string().min(1),
   address: z.string().optional(),
+  /** Rendered as a tel: link — the thing you need when the address has not helped. */
+  phone: z.string().optional(),
   lat: z.number().optional(),
   lng: z.number().optional(),
 });

@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "tripId": "japan-2023",
+  "name": "Japan 2023",
+  "startDate": "2023-03-19",
+  "endDate": "2023-03-30",
+  "items": [
+    {
+      "id": "flight-out",
+      "type": "flight",
+      "title": "UA 7925 — to Tokyo",
+      "endsAt": "2023-03-19T21:00:00+09:00",
+      "confirmationNumber": "PHKEYQ",
+      "notes": "Arrives Tokyo 9:00 PM. Second confirmation: 3CXEIK.",
+      "attachments": []
+    },
+    {
+      "id": "hotel-tokyo-1",
+      "type": "lodging",
+      "title": "Residence Condominium — Tokyo",
+      "startsAt": "2023-03-19T15:00:00+09:00",
+      "endsAt": "2023-03-22T11:00:00+09:00",
+      "location": {
+        "name": "Residence Condominium",
+        "address": "1-29-20 Nishinippori, Arakawa, Tokyo 116-0013",
+        "phone": "+81-3-5604-9846"
+      },
+      "attachments": []
+    },
+    {
+      "id": "sensoji",
+      "type": "activity",
+      "title": "Sensō-ji Temple, Nintendo Store, Akihabara",
+      "startsAt": "2023-03-20T10:00:00+09:00",
+      "attachments": []
+    },
+    {
+      "id": "disneyland",
+      "type": "activity",
+      "title": "Tokyo Disneyland",
+      "startsAt": "2023-03-21T09:00:00+09:00",
+      "attachments": []
+    },
+    {
+      "id": "to-kyoto",
+      "type": "train",
+      "title": "Tokyo → Kyoto",
+      "startsAt": "2023-03-22T09:00:00+09:00",
+      "attachments": []
+    },
+    {
+      "id": "hotel-kyoto",
+      "type": "lodging",
+      "title": "RESISTAY — Kyoto",
+      "startsAt": "2023-03-22T15:00:00+09:00",
+      "endsAt": "2023-03-27T11:00:00+09:00",
+      "location": {
+        "name": "RESISTAY",
+        "address": "173-6 Sanjōaburanokōjichō, Nakagyō-ku, Kyoto 604-8251",
+        "phone": "+81-75-353-7744"
+      },
+      "attachments": []
+    },
+    {
+      "id": "kiyomizudera",
+      "type": "activity",
+      "title": "Kiyomizu-dera",
+      "startsAt": "2023-03-22T16:00:00+09:00",
+      "notes": "Open 6:00 AM – 9:30 PM.",
+      "attachments": []
+    },
+    {
+      "id": "osaka",
+      "type": "activity",
+      "title": "Osaka — Universal Studios, Osaka Castle, Dotonbori",
+      "startsAt": "2023-03-23T09:00:00+09:00",
+      "attachments": []
+    },
+    {
+      "id": "fushimi-inari",
+      "type": "activity",
+      "title": "Fushimi Inari Shrine",
+      "startsAt": "2023-03-24T07:00:00+09:00",
+      "notes": "Go before 8:00 AM to beat the crowds.",
+      "attachments": []
+    },
+    {
+      "id": "kinkakuji",
+      "type": "activity",
+      "title": "Kinkaku-ji",
+      "startsAt": "2023-03-24T10:00:00+09:00",
+      "notes": "Open 9:00 AM – 5:00 PM.",
+      "attachments": []
+    },
+    {
+      "id": "nara",
+      "type": "activity",
+      "title": "Nara — Kōfuku-ji, Tōdai-ji",
+      "startsAt": "2023-03-25T09:00:00+09:00",
+      "notes": "Tōdai-ji open 8:00 AM – 5:00 PM, ¥600.",
+      "attachments": []
+    },
+    {
+      "id": "arashiyama",
+      "type": "activity",
+      "title": "Arashiyama Bamboo Grove",
+      "startsAt": "2023-03-26T09:00:00+09:00",
+      "attachments": []
+    },
+    {
+      "id": "to-tokyo",
+      "type": "train",
+      "title": "Kyoto → Tokyo",
+      "startsAt": "2023-03-27T10:00:00+09:00",
+      "attachments": []
+    },
+    {
+      "id": "hotel-tokyo-2",
+      "type": "lodging",
+      "title": "Residence Condominium — Tokyo",
+      "startsAt": "2023-03-27T15:00:00+09:00",
+      "endsAt": "2023-03-30T11:00:00+09:00",
+      "location": {
+        "name": "Residence Condominium",
+        "address": "1-29-20 Nishinippori, Arakawa, Tokyo 116-0013",
+        "phone": "+81-3-5604-9846"
+      },
+      "attachments": []
+    },
+    {
+      "id": "meiji",
+      "type": "activity",
+      "title": "Meiji Shrine, Ueno, Harajuku",
+      "startsAt": "2023-03-28T10:00:00+09:00",
+      "attachments": []
+    },
+    {
+      "id": "teamlab",
+      "type": "activity",
+      "title": "teamLab Planets",
+      "startsAt": "2023-03-29T12:00:00+09:00",
+      "endsAt": "2023-03-29T12:30:00+09:00",
+      "notes": "Timed entry between 12:00 and 12:30 PM.",
+      "attachments": []
+    },
+    {
+      "id": "flight-home",
+      "type": "flight",
+      "title": "Tokyo → home",
+      "startsAt": "2023-03-30T21:00:00+09:00",
+      "confirmationNumber": "3CXEIK",
+      "attachments": []
+    },
+    {
+      "id": "souvenirs",
+      "type": "poi",
+      "title": "Souvenir list",
+      "notes": "No fixed time — an example of something that lands in Unscheduled.",
+      "attachments": []
+    }
+  ]
+}

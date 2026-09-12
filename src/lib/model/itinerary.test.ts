@@ -81,3 +81,27 @@ describe('parseItinerary', () => {
     expect(() => parseItinerary('garbage')).toThrow();
   });
 });
+
+describe('location details', () => {
+  test('keeps a phone number for the place', () => {
+    const doc = parseItinerary({
+      ...validDoc(),
+      items: [
+        {
+          id: 'hotel',
+          type: 'lodging',
+          title: 'Residence Condominium',
+          location: {
+            name: 'Residence Condominium',
+            address: '1-29-20 Nishinippori, Arakawa, Tokyo 116-0013',
+            phone: '+81-3-5604-9846',
+          },
+        },
+      ],
+    });
+
+    // The number you need when you are standing outside at midnight and the
+    // address has not helped.
+    expect(doc.items[0]!.location!.phone).toBe('+81-3-5604-9846');
+  });
+});
