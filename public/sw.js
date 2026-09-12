@@ -9,7 +9,7 @@
  * means a shell update can never drop a downloaded boarding pass.
  */
 
-const VERSION = 'v1';
+const VERSION = 'v2';
 const SHELL_CACHE = `marching-orders-shell-${VERSION}`;
 
 /** Resolves against the registration scope, so the GitHub Pages subpath works. */
@@ -91,19 +91,55 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Built assets carry a content hash in their name, so a cached hit is always
-  // the right bytes for that URL and a new build simply asks for new URLs.
+  /*
+   * Only content-hashed files may be served cache-first.
+   *
+   * A hashed name is a promise that the bytes never change, so a cached hit is
+   * always right and a new build simply asks for new URLs. Everything else —
+   * icons, the manifest, anything dropped in public/ — keeps its name forever,
+   * and cache-first meant those could never be updated at all. That is how a
+   * new app icon stayed invisible after a successful deploy.
+   */
+  const immutable = /\/assets\/.+-[A-Za-z0-9_-]{8,}\.[a-z0-9]+$/.test(url.pathname);
+
+  if (immutable) {
+    event.respondWith(
+      (async () => {
+        const cache = await caches.open(SHELL_CACHE);
+        const cached = await cache.match(request);
+        if (cached) return cached;
+
+        const response = await fetch(request);
+        if (response.ok && response.type === 'basic') {
+          await cache.put(request, response.clone());
+        }
+        return response;
+      })(),
+    );
+    return;
+  }
+
+  /*
+   * Everything else is served from cache for speed and for offline, and
+   * refreshed in the background so the next load has the new bytes. A stable
+   * name has to stay correctable.
+   */
   event.respondWith(
     (async () => {
       const cache = await caches.open(SHELL_CACHE);
       const cached = await cache.match(request);
-      if (cached) return cached;
 
-      const response = await fetch(request);
-      if (response.ok && response.type === 'basic') {
-        await cache.put(request, response.clone());
-      }
-      return response;
+      const fetching = fetch(request)
+        .then(async (response) => {
+          if (response.ok && response.type === 'basic') {
+            await cache.put(request, response.clone());
+          }
+          return response;
+        })
+        .catch(() => null);
+
+      // Offline with nothing cached is the only case with nothing to return.
+      return cached ?? (await fetching) ?? Response.error();
     })(),
   );
 });
