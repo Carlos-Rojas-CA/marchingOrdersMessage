@@ -93,6 +93,13 @@ const locationSchema = z.looseObject({
   city: z.string().optional(),
   /** IANA zone, so times here can be composed without guessing at an offset. */
   timeZone: z.string().optional(),
+  /**
+   * A map link the traveller pasted.
+   *
+   * Kept verbatim and preferred over anything derived: their own link opens
+   * their own app, which beats any guess about which maps they prefer.
+   */
+  mapsUrl: z.string().optional(),
   lat: z.number().optional(),
   lng: z.number().optional(),
 });

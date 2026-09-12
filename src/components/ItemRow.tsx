@@ -3,6 +3,7 @@ import { ChevronRight, FileText, MapPin, Phone } from 'lucide-react';
 import type { ItineraryItem } from '../lib/model/itinerary';
 import { formatDayLabel, formatTimeOfDay } from '../lib/model/format';
 import { ItemIcon } from './ui';
+import { devicePlatform, mapsLinkFor } from '../lib/model/maps';
 
 /**
  * One itinerary item.
@@ -24,10 +25,9 @@ export function ItemRow({
   const stay = item.type === 'lodging' && item.startsAt && item.endsAt;
 
   const place = item.location;
-  const mapQuery =
-    place?.lat !== undefined && place.lng !== undefined
-      ? `${place.lat},${place.lng}`
-      : place?.address || place?.name;
+  // Opens the maps app the device actually uses, or the traveller's own link
+  // when they pasted one.
+  const mapLink = place ? mapsLinkFor(place, devicePlatform()) : null;
 
   // A placeholder stay names itself after its city, so the location line under
   // it would otherwise say the same words twice.
@@ -116,15 +116,15 @@ export function ItemRow({
           </a>
         ) : null}
 
-        {mapQuery ? (
+        {mapLink ? (
           <a
-            href={`https://maps.google.com/?q=${encodeURIComponent(mapQuery)}`}
+            href={mapLink}
             target="_blank"
             rel="noreferrer"
             className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-surface-2 px-2.5 text-sm hover:bg-border"
           >
             <MapPin className="size-3.5 shrink-0" aria-hidden />
-            Map
+            Directions
           </a>
         ) : null}
       </div>

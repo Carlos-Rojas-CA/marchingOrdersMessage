@@ -6,6 +6,7 @@ import { useLoadedTrip } from '../hooks/useLoadedTrip';
 import { ITEM_TYPES, type ItemType } from '../lib/model/itinerary';
 import { legsFromStays } from '../lib/model/route';
 import { resolveTimeZone, timestampFrom, type Place } from '../lib/model/timezones';
+import { parseMapsUrl } from '../lib/model/maps';
 import { searchPlaces } from '../lib/model/timezones';
 import { Button, ItemIcon } from '../components/ui';
 import {
@@ -162,6 +163,8 @@ export function ItemFormScreen() {
   }
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
+  const [mapsUrl, setMapsUrl] = useState('');
+  const [pastedNote, setPastedNote] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
@@ -179,6 +182,7 @@ export function ItemFormScreen() {
     setEndTime(existing.endsAt?.slice(11, 16) ?? '');
     setAddress(existing.location?.address ?? '');
     setPhone(existing.location?.phone ?? '');
+    setMapsUrl(existing.location?.mapsUrl ?? '');
     setConfirmation(existing.confirmationNumber ?? '');
     setNotes(existing.notes ?? '');
     if (existing.location?.city) {
@@ -216,6 +220,30 @@ export function ItemFormScreen() {
     lastUsed: lastPlace()?.timeZone,
   });
 
+  /**
+   * Takes a pasted map link and fills in whatever can be read from it.
+   *
+   * The link itself is always kept, because that is what opens their maps app
+   * when tapped. Reading a name and coordinates out of it is a bonus, and the
+   * shortened links a phone's share sheet produces yield nothing — they hide
+   * everything behind a redirect the browser may not follow.
+   */
+  function pasteMapsUrl(value: string) {
+    setMapsUrl(value);
+    setPastedNote(null);
+    if (!value.trim()) return;
+
+    const read = parseMapsUrl(value);
+    if (!read) {
+      setPastedNote('Saved. This link opens your maps app, but its details cannot be read here.');
+      return;
+    }
+    if (read.name && !title.trim()) setTitle(read.name);
+    setPastedNote(
+      read.name ? `Read “${read.name}” from that link.` : 'Read the location from that link.',
+    );
+  }
+
   async function save() {
     setError(null);
     setSaving(true);
@@ -223,12 +251,15 @@ export function ItemFormScreen() {
       // Where the item *ends up* is what locates it: a flight belongs to its
       // destination, and everything else has only the one place.
       const place = toPlace;
+      const read = mapsUrl ? parseMapsUrl(mapsUrl) : null;
       const location =
-        place || address || phone
+        place || address || phone || mapsUrl
           ? {
               name: place?.name ?? (title || 'Location'),
               ...(address ? { address } : {}),
               ...(phone ? { phone } : {}),
+              ...(mapsUrl ? { mapsUrl } : {}),
+              ...(read?.lat !== undefined ? { lat: read.lat, lng: read.lng } : {}),
               ...(place ? { city: place.name, timeZone: place.timeZone } : {}),
             }
           : undefined;
@@ -401,10 +432,22 @@ export function ItemFormScreen() {
           </>
         )}
 
-        {isStay ? (
+        {detailed ? (
           <>
-            <TextField label="Address" value={address} onChange={setAddress} />
+            <TextField
+              label="Address"
+              value={address}
+              onChange={setAddress}
+              placeholder="Via Toledo 1, Napoli"
+            />
             <TextField label="Phone" value={phone} onChange={setPhone} type="tel" />
+            <TextField
+              label="Map link (optional)"
+              value={mapsUrl}
+              onChange={pasteMapsUrl}
+              placeholder="Paste a Google or Apple Maps link"
+            />
+            {pastedNote ? <p className="-mt-2 text-sm text-ok">{pastedNote}</p> : null}
           </>
         ) : null}
 

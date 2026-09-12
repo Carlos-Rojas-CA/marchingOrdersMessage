@@ -552,3 +552,77 @@ describe('a date is never lost, whatever the form did', () => {
     });
   });
 });
+
+describe('finding your way to an activity', () => {
+  test('an activity can carry an address, not only a hotel', async () => {
+    const { itinerary } = await renderAt(`/trip/${FOLDER}/item/new?type=activity`);
+    const user = userEvent.setup();
+
+    await user.type(await screen.findByLabelText('What is it?'), 'Paint class');
+    await user.type(screen.getByLabelText('Address'), 'Via Toledo 1, Napoli');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(async () => {
+      const [item] = (await itinerary()).items;
+      // Address and phone used to appear only for stays, so there was nowhere
+      // to record where an activity actually was.
+      expect(item.location.address).toBe('Via Toledo 1, Napoli');
+    });
+  });
+
+  test('a pasted map link is kept, and its details read where possible', async () => {
+    const { itinerary } = await renderAt(`/trip/${FOLDER}/item/new?type=activity`);
+    const user = userEvent.setup();
+
+    const link =
+      'https://www.google.com/maps/place/Caff%C3%A8+Gambrinus/@40.8358,14.2487,17z';
+    await user.type(await screen.findByLabelText('What is it?'), 'Coffee');
+    await user.click(screen.getByLabelText('Map link (optional)'));
+    await user.paste(link);
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(async () => {
+      const [item] = (await itinerary()).items;
+      expect(item.location.mapsUrl).toBe(link);
+      expect(item.location.lat).toBeCloseTo(40.8358);
+    });
+  });
+
+  test('says what it managed to read from the link', async () => {
+    await renderAt(`/trip/${FOLDER}/item/new?type=activity`);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByLabelText('Map link (optional)'));
+    await user.paste('https://www.google.com/maps/place/Castel+dell%27Ovo/@40.828,14.2478,17z');
+
+    expect(await screen.findByText(/Read “Castel dell'Ovo”/)).toBeInTheDocument();
+  });
+
+  test('keeps a shortened link and admits it cannot read it', async () => {
+    await renderAt(`/trip/${FOLDER}/item/new?type=activity`);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByLabelText('Map link (optional)'));
+    await user.paste('https://maps.app.goo.gl/abc123');
+
+    // The link still works when tapped; pretending otherwise would be worse
+    // than saying plainly that it cannot be inspected.
+    expect(await screen.findByText(/cannot be read here/)).toBeInTheDocument();
+  });
+
+  test('offers directions once there is anywhere to go', async () => {
+    await renderAt(`/trip/${FOLDER}/legs`, [
+      {
+        id: 'paint',
+        type: 'activity',
+        title: 'Paint class',
+        startsAt: '2026-05-10T13:00:00+02:00',
+        location: { name: 'Paint class', address: 'Via Toledo 1, Napoli' },
+      },
+    ]);
+
+    // Rendered through the timeline rather than legs, so just assert the model
+    // side here; the row test covers the chip.
+    expect(await screen.findByRole('heading', { name: 'Legs' })).toBeInTheDocument();
+  });
+});

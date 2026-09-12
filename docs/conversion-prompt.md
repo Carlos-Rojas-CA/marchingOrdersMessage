@@ -44,7 +44,8 @@ Each item:
   "location": {
     "name": "<place name>",
     "address": "<full street address>",
-    "phone": "<phone number in international form>"
+    "phone": "<phone number in international form>",
+    "mapsUrl": "<a Google or Apple Maps link, if the source has one>"
   },
   "attachments": []
 }
@@ -91,9 +92,14 @@ RULES
    confirmation numbers or phone numbers. An item with only a type and a title
    is valid and will appear under "Unscheduled".
 
-7. Leave "attachments" as an empty array. PDFs are attached in the app later.
+7. GIVE ANYTHING WITH A PLACE AN ADDRESS, not just hotels. Museums,
+   restaurants, classes and meeting points all need one — it is what the app
+   turns into directions. Copy map links verbatim into "mapsUrl" if the source
+   has them; never invent one.
 
-8. Every "id" must be unique within the trip.
+8. Leave "attachments" as an empty array. PDFs are attached in the app later.
+
+9. Every "id" must be unique within the trip.
 
 TRIP DOCUMENT
 

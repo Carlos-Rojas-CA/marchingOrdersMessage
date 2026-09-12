@@ -257,3 +257,67 @@ describe('a row stays quiet when there is nothing to show', () => {
     expect(await screen.findByRole('link', { name: /boarding\.pdf/ })).toBeInTheDocument();
   });
 });
+
+describe('directions', () => {
+  const withPlace = (location: Record<string, unknown>) => ({
+    schemaVersion: 1,
+    tripId: 't1',
+    name: 'Trip',
+    items: [
+      {
+        id: 'paint',
+        type: 'activity',
+        title: 'Paint class',
+        startsAt: '2026-09-21T13:00:00+02:00',
+        location,
+        attachments: [],
+      },
+    ],
+  });
+
+  test('offers directions for an activity with an address', async () => {
+    await renderLens(<TimelineScreen />, {
+      itinerary: withPlace({ name: 'Paint class', address: 'Via Toledo 1, Napoli' }),
+    });
+
+    const link = await screen.findByRole('link', { name: /Directions/ });
+    expect(link).toHaveAttribute('target', '_blank');
+  });
+
+  test('uses the link the traveller pasted, over anything derived', async () => {
+    await renderLens(<TimelineScreen />, {
+      itinerary: withPlace({
+        name: 'Paint class',
+        address: 'Via Toledo 1, Napoli',
+        mapsUrl: 'https://maps.app.goo.gl/abc123',
+      }),
+    });
+
+    expect(await screen.findByRole('link', { name: /Directions/ })).toHaveAttribute(
+      'href',
+      'https://maps.app.goo.gl/abc123',
+    );
+  });
+
+  test('offers nothing when there is nowhere to go', async () => {
+    await renderLens(<TimelineScreen />, {
+      itinerary: {
+        schemaVersion: 1,
+        tripId: 't1',
+        name: 'Trip',
+        items: [
+          {
+            id: 'note',
+            type: 'note',
+            title: 'Pack sunscreen',
+            startsAt: '2026-09-21T13:00:00+02:00',
+            attachments: [],
+          },
+        ],
+      },
+    });
+
+    await screen.findByText('Pack sunscreen');
+    expect(screen.queryByRole('link', { name: /Directions/ })).not.toBeInTheDocument();
+  });
+});
