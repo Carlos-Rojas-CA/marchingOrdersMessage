@@ -21,9 +21,9 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      # The client id comes from the committed .env. Passing an empty repo
+      # variable here would override it and produce a build that cannot sign in.
       - run: npm run build
-        env:
-          VITE_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
 
       # The point of the budget is that a regression fails the build rather
       # than accumulating quietly. The PDF renderer is lazy, so only the

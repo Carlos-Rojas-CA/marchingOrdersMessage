@@ -56,7 +56,7 @@ stands between a saved boarding pass and an empty screen.
 
 ```bash
 npm install
-npm run dev          # needs VITE_GOOGLE_CLIENT_ID
+npm run dev               # real Drive; client id comes from .env
 VITE_DEMO=1 npm run dev   # sample trip, in-memory Drive, no credentials
 ```
 
@@ -64,29 +64,36 @@ Demo mode runs the entire app against the same in-memory Drive the tests use —
 no Google account, no network, no quota. It is the fastest way to see the app.
 
 ```bash
-npm test             # 150 tests
+npm test                  # 154 tests
 npm run typecheck
 npm run build
 ```
 
 ## Configuration
 
-Create an OAuth client id (type: Web application) in Google Cloud Console, and
-set it at build time:
+The OAuth client id lives in the committed `.env`. Nothing else is needed to
+build or run.
 
-```bash
-VITE_GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com npm run build
+It is committed deliberately: a client id is not a secret — it ships inside the
+JavaScript bundle of every browser-based OAuth app, so anyone opening the site
+can read it. What protects the app is the **Authorized JavaScript origins** list
+on that client in Google Cloud Console; a request from an unregistered origin is
+refused regardless of who holds the id.
+
+Origins to register:
+
+```
+http://localhost:5178          # npm run dev
+https://carlos-rojas-ca.github.io   # deployed
 ```
 
-Authorised JavaScript origins must include wherever it is served from, e.g.
-`https://carlos-rojas-ca.github.io`.
-
-The client id is public by design — it travels in every browser request. There
-is no client secret anywhere in this app; the browser uses PKCE, which has none.
-That is what makes this repository safe to keep public.
+There is no client secret anywhere in this project — the browser uses PKCE,
+which has none. If Google generated one alongside the id, leave it unused.
+Anything genuinely private goes in `.env.local`, which is gitignored.
 
 **Scope: `drive.file` only.** The app can reach files it created or that you
-explicitly picked, and nothing else in your Drive.
+explicitly picked, and nothing else in your Drive. This also keeps it clear of
+the third-party security assessment that the full `drive` scope can trigger.
 
 ## Architecture
 
