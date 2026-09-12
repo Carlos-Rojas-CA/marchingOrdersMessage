@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft, CircleAlert, Download, X } from 'lucide-react';
 import { useAppState, useServices } from '../hooks/useServices';
+import { useLoadedTrip } from '../hooks/useLoadedTrip';
 import { groupDocuments } from '../lib/model/documents';
 import { attachmentBlob } from '../lib/store/tripStore';
 import { formatDayLabel, formatTimeOfDay } from '../lib/model/format';
@@ -30,15 +31,7 @@ export function DocumentViewerScreen() {
   // native-app note in the design spec.
   useWakeLock();
 
-  useEffect(() => {
-    void (async () => {
-      await app.openTrip(folderId);
-      // A deep link — or reopening the installed app straight onto this route —
-      // arrives with nothing loaded. Reconcile once before concluding the
-      // document is gone.
-      if (!app.getSnapshot().current) await app.refresh(folderId);
-    })();
-  }, [app, folderId]);
+  useLoadedTrip(folderId);
 
   const doc = state.current?.doc;
 

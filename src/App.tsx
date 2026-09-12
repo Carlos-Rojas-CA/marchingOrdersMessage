@@ -9,6 +9,9 @@ import { TimelineScreen } from './routes/TimelineScreen';
 import { DocumentsScreen } from './routes/DocumentsScreen';
 import { DocumentViewerScreen } from './routes/DocumentViewerScreen';
 import { ImportScreen } from './routes/ImportScreen';
+import { RouteScreen } from './routes/RouteScreen';
+import { LegsScreen } from './routes/LegsScreen';
+import { ItemFormScreen } from './routes/ItemFormScreen';
 
 function Splash() {
   return (
@@ -44,6 +47,13 @@ function Router() {
           tab bar competing for space or for taps. */}
       <Route path="/trip/:folderId/doc/:fileId" element={<DocumentViewerScreen />} />
       <Route path="/trip/:folderId/import" element={<ImportScreen />} />
+
+      {/* Builder screens stand alone: each is a focused task, and the tab bar
+          would compete for both space and attention. */}
+      <Route path="/trip/:folderId/route" element={<RouteScreen />} />
+      <Route path="/trip/:folderId/legs" element={<LegsScreen />} />
+      <Route path="/trip/:folderId/item/new" element={<ItemFormScreen />} />
+      <Route path="/trip/:folderId/item/:itemId" element={<ItemFormScreen />} />
 
       <Route path="/trip/:folderId" element={<TripShell />}>
         <Route index element={<NowScreen />} />

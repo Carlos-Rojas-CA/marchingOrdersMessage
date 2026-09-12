@@ -1,9 +1,19 @@
 import { NavLink, Outlet, useParams } from 'react-router-dom';
-import { CalendarDays, ChevronLeft, Clock, FileText, RefreshCw, WifiOff } from 'lucide-react';
+import {
+  CalendarDays,
+  ChevronLeft,
+  Clock,
+  FileText,
+  Map,
+  Plus,
+  RefreshCw,
+  WifiOff,
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppState, useServices } from '../hooks/useServices';
 import { cn } from './ui';
+import { AddSheet } from './AddSheet';
 
 /**
  * Frame around the three lenses onto a trip.
@@ -44,6 +54,7 @@ export function TripShell() {
   const { app } = useServices();
   const state = useAppState();
   const trip = state.current?.trip;
+  const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     // Render from local storage first, then reconcile in the background. The
@@ -77,6 +88,14 @@ export function TripShell() {
             </span>
           ) : null}
 
+          <Link
+            to={`/trip/${folderId}/legs`}
+            aria-label="Legs and gaps"
+            className="flex size-10 items-center justify-center rounded-lg text-muted hover:bg-surface-2"
+          >
+            <Map className="size-4" aria-hidden />
+          </Link>
+
           <button
             type="button"
             onClick={() => void app.refresh(folderId)}
@@ -104,6 +123,21 @@ export function TripShell() {
       <main className="flex-1 px-3 pb-24">
         <Outlet />
       </main>
+
+      {trip?.canEdit ? (
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          aria-label="Add to trip"
+          className="fixed right-4 bottom-20 z-20 flex size-14 items-center justify-center rounded-full bg-accent text-accent-contrast shadow-lg"
+        >
+          <Plus className="size-6" aria-hidden />
+        </button>
+      ) : null}
+
+      {adding ? (
+        <AddSheet folderId={folderId} onClose={() => setAdding(false)} />
+      ) : null}
 
       <nav className="pad-safe-bottom fixed inset-x-0 bottom-0 z-10 mx-auto flex max-w-2xl border-t border-border bg-surface/95 backdrop-blur">
         <TabLink to={`/trip/${folderId}`} end icon={Clock} label="Now" />

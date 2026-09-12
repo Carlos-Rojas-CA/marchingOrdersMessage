@@ -14,6 +14,8 @@ export function TripsScreen() {
   const state = useAppState();
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -33,10 +35,12 @@ export function TripsScreen() {
     if (!name.trim()) return;
     setError(null);
     try {
-      const folderId = await sync.createTrip(name.trim());
+      const folderId = await sync.createTrip(name.trim(), { startDate, endDate });
       await app.reconcileAccount();
       await app.loadTrips();
-      navigate(`/trip/${folderId}`);
+      // Straight into sketching the route: a brand new trip has nothing to
+      // show on its day view, and this is the question that comes next.
+      navigate(`/trip/${folderId}/route`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not create the trip.');
     }
@@ -113,6 +117,33 @@ export function TripsScreen() {
               placeholder="Japan 2026"
               className="mt-1 w-full rounded-xl border border-border bg-bg px-3 py-2.5 outline-none focus:border-accent"
             />
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="flex flex-col gap-1">
+                <label htmlFor="trip-start" className="text-xs text-muted">
+                  First day
+                </label>
+                <input
+                  id="trip-start"
+                  type="date"
+                  value={startDate}
+                  onChange={(event) => setStartDate(event.target.value)}
+                  className="min-h-11 rounded-xl border border-border bg-bg px-3 outline-none focus:border-accent"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label htmlFor="trip-end" className="text-xs text-muted">
+                  Last day
+                </label>
+                <input
+                  id="trip-end"
+                  type="date"
+                  value={endDate}
+                  min={startDate || undefined}
+                  onChange={(event) => setEndDate(event.target.value)}
+                  className="min-h-11 rounded-xl border border-border bg-bg px-3 outline-none focus:border-accent"
+                />
+              </div>
+            </div>
             <p className="mt-2 text-sm text-muted">
               This creates a Drive folder of the same name and puts the itinerary
               inside it.
