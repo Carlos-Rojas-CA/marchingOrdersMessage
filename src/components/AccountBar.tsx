@@ -19,7 +19,7 @@ export function AccountBar() {
   async function signOut() {
     setBusy(true);
     try {
-      auth.signOut();
+      await auth.signOut();
       await app.signOut();
     } finally {
       setBusy(false);
@@ -51,8 +51,9 @@ export function AccountBar() {
           {switching ? 'Switch to another account?' : 'Sign out?'}
         </p>
         <p className="mt-1 text-sm text-muted">
-          Trips and downloaded documents on this device will be removed. They
-          stay in Google Drive and come back when you sign in again.
+          Trips and downloaded documents will be removed from this device, and
+          this app's access to your Drive will be withdrawn. Nothing in Drive
+          itself is deleted — it all comes back when you sign in again.
         </p>
         <div className="mt-3 flex gap-2">
           <Button

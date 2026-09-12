@@ -210,15 +210,74 @@ describe('account changes', () => {
 });
 
 describe('signOut', () => {
-  test('clears local data and the recorded account', async () => {
+  async function tripWithDownloadedDocument() {
     drive.seedJson('folder-1', ITINERARY_FILENAME, ITINERARY);
+    await drive.uploadFile({
+      folderId: 'folder-1',
+      name: 'boarding.pdf',
+      mimeType: 'application/pdf',
+      content: new Blob(['%PDF-secret']),
+    });
     await app.refresh('folder-1');
+    await app.downloadForOffline('folder-1');
     await app.reconcileAccount();
+  }
+
+  test('clears local data and the recorded account', async () => {
+    await tripWithDownloadedDocument();
 
     await app.signOut();
 
     expect(await store.listTrips()).toEqual([]);
     expect(app.getSnapshot().account).toBeNull();
     expect(app.getSnapshot().current).toBeNull();
+  });
+
+  test('leaves no downloaded document bytes on the device', async () => {
+    await tripWithDownloadedDocument();
+    expect(await store.cachedBytes('folder-1')).toBeGreaterThan(0);
+
+    await app.signOut();
+
+    // The privacy-relevant part. Clearing the trip list while leaving the
+    // boarding passes sitting in IndexedDB would be the worst of both worlds:
+    // it looks signed out and isn't.
+    expect(await store.listAttachments('folder-1')).toEqual([]);
+    expect(await store.cachedBytes('folder-1')).toBe(0);
+  });
+
+  test('discards writes that were still queued', async () => {
+    await tripWithDownloadedDocument();
+    await store.enqueue({ folderId: 'folder-1', kind: 'itinerary', payload: { v: 1 } });
+
+    await app.signOut();
+
+    expect(await store.pending()).toEqual([]);
+  });
+});
+
+describe('losing a token is not signing out', () => {
+  test('an expired session leaves downloaded documents untouched', async () => {
+    drive.seedJson('folder-1', ITINERARY_FILENAME, ITINERARY);
+    await drive.uploadFile({
+      folderId: 'folder-1',
+      name: 'boarding.pdf',
+      mimeType: 'application/pdf',
+      content: new Blob(['%PDF']),
+    });
+    await app.refresh('folder-1');
+    await app.downloadForOffline('folder-1');
+
+    // Every Drive call now fails the way an expired credential does.
+    vi.spyOn(drive, 'listFolder').mockRejectedValue(new Error('Invalid Credentials'));
+    vi.spyOn(drive, 'getCurrentUser').mockRejectedValue(new Error('Invalid Credentials'));
+    await app.refresh('folder-1');
+    await app.reconcileAccount();
+
+    // This is the inverse of signing out and must never be confused with it.
+    // An hourly token lapsing at an airport cannot be allowed to delete the
+    // boarding pass the traveller is standing there to show.
+    expect(await store.cachedBytes('folder-1')).toBeGreaterThan(0);
+    expect((await store.listTrips())).toHaveLength(1);
   });
 });

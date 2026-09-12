@@ -150,3 +150,49 @@ describe('switching accounts', () => {
     expect(request).toHaveBeenLastCalledWith({ silent: true });
   });
 });
+
+describe('signing out', () => {
+  test('withdraws the app’s access rather than only forgetting it', async () => {
+    const revoke = vi.fn().mockResolvedValue(undefined);
+    const auth = new GoogleAuth({ request: sourceReturning(anHour).request, revoke });
+    await auth.getAccessToken();
+
+    await auth.signOut();
+
+    // Forgetting the token locally would leave the app still authorised: the
+    // next sign-in would sail through silently and nothing would really have
+    // been signed out of.
+    expect(revoke).toHaveBeenCalledWith('token-1');
+  });
+
+  test('forgets the token even if revoking fails', async () => {
+    const auth = new GoogleAuth({
+      request: sourceReturning(anHour, { accessToken: 'token-2', expiresInSeconds: 3600 })
+        .request,
+      revoke: vi.fn().mockRejectedValue(new Error('offline')),
+    });
+    await auth.getAccessToken();
+
+    await auth.signOut();
+
+    // Signing out while offline must still sign you out locally.
+    expect(auth.hasValidToken()).toBe(false);
+  });
+
+  test('does nothing to revoke when no token is held', async () => {
+    const revoke = vi.fn();
+    const auth = new GoogleAuth({ request: sourceReturning(anHour).request, revoke });
+
+    await auth.signOut();
+
+    expect(revoke).not.toHaveBeenCalled();
+  });
+
+  test('works with a token source that cannot revoke', async () => {
+    const auth = new GoogleAuth(sourceReturning(anHour));
+    await auth.getAccessToken();
+
+    await expect(auth.signOut()).resolves.toBeUndefined();
+    expect(auth.hasValidToken()).toBe(false);
+  });
+});

@@ -18,6 +18,11 @@ export interface TokenGrant {
  */
 export interface TokenSource {
   request(options: { silent: boolean; chooseAccount?: boolean }): Promise<TokenGrant>;
+  /**
+   * Withdraws the app's access with Google. Optional: a source that cannot
+   * revoke simply leaves the grant standing.
+   */
+  revoke?(accessToken: string): Promise<void>;
 }
 
 /**
@@ -43,8 +48,25 @@ export class GoogleAuth {
     return this.#token !== null && this.now() < this.#token.expiresAt - RENEW_MARGIN_MS;
   }
 
-  signOut(): void {
+  /**
+   * Signs out, withdrawing the app's access rather than merely forgetting it.
+   *
+   * Dropping the token locally would leave the grant standing with Google, so
+   * the next sign-in would sail through silently and nothing would really have
+   * been signed out of.
+   *
+   * Revocation is best-effort: signing out while offline must still sign you
+   * out locally, so a failure here is not allowed to keep the token alive.
+   */
+  async signOut(): Promise<void> {
+    const token = this.#token?.value;
     this.#token = null;
+    if (!token || !this.source.revoke) return;
+    try {
+      await this.source.revoke(token);
+    } catch {
+      // The local token is already gone, which is the part that matters here.
+    }
   }
 
   /**

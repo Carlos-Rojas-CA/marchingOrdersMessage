@@ -30,6 +30,7 @@ interface GoogleGlobal {
         callback: (response: GisTokenResponse) => void;
         error_callback?: (error: { type?: string; message?: string }) => void;
       }): GisTokenClient;
+      revoke(accessToken: string, done: () => void): void;
     };
   };
 }
@@ -109,6 +110,17 @@ export function createGisTokenSource(clientId: string): TokenSource {
         // the switch button look broken.
         const prompt = chooseAccount ? 'select_account' : silent ? '' : 'consent';
         active.requestAccessToken({ prompt });
+      });
+    },
+
+    async revoke(accessToken: string): Promise<void> {
+      await loadGis();
+      const oauth2 = window.google?.accounts?.oauth2;
+      if (!oauth2) return;
+      await new Promise<void>((resolve) => {
+        oauth2.revoke(accessToken, () => {
+          resolve();
+        });
       });
     },
   };
