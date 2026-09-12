@@ -327,7 +327,7 @@ describe('transitionGaps', () => {
     // Driving needs no ticket, but it is still how you got there. Without a
     // way to say so, a move you made by car would be flagged forever — and a
     // warning that cannot be satisfied is one people learn to ignore.
-    for (const type of ['train', 'ferry', 'bus', 'car']) {
+    for (const type of ['train', 'ferry', 'bus', 'car', 'transit']) {
       const gaps = transitionGaps(
         trip({
           items: [

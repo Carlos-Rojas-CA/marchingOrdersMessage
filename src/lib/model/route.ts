@@ -133,6 +133,9 @@ const MOVES_YOU: ReadonlySet<ItemType> = new Set<ItemType>([
   // to record it, a move made by car would be flagged forever — and a warning
   // that cannot be satisfied is one people learn to ignore.
   'car',
+  // Anything else that got you there — a rideshare, a funicular, a lift from a
+  // friend. What matters is that the move is recorded, not how it was made.
+  'transit',
 ]);
 
 export interface BedGap {

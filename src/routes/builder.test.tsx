@@ -342,3 +342,29 @@ describe('the route start', () => {
     expect(await screen.findByText(/Mon, May 11 – Tue, May 12/)).toBeInTheDocument();
   });
 });
+
+describe('answering a transition gap', () => {
+  const twoCities = [
+    stay('Rome', '2026-05-08', '2026-05-13'),
+    stay('Barcelona', '2026-05-13', '2026-05-21', 'Europe/Madrid'),
+  ];
+
+  test('offers every way of getting there, not just the two with tickets', async () => {
+    await renderAt(`/trip/${FOLDER}/legs`, twoCities);
+
+    await screen.findByText(/Rome → Barcelona/);
+    for (const how of ['Flight', 'Train', 'Ferry', 'Bus', 'Car or transfer', 'Other travel']) {
+      expect(screen.getByRole('link', { name: how })).toBeInTheDocument();
+    }
+  });
+
+  test('each one opens the form already dated to the day of the move', async () => {
+    await renderAt(`/trip/${FOLDER}/legs`, twoCities);
+
+    await screen.findByText(/Rome → Barcelona/);
+    expect(screen.getByRole('link', { name: 'Ferry' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('date=2026-05-13'),
+    );
+  });
+});

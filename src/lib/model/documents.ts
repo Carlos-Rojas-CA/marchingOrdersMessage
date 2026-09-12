@@ -44,6 +44,7 @@ const INFERRED: Record<ItemType, DocType> = {
   ferry: 'travel',
   bus: 'travel',
   car: 'travel',
+  transit: 'travel',
   lodging: 'lodging',
   activity: 'ticket',
   poi: 'other',
