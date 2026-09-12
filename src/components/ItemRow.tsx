@@ -1,16 +1,16 @@
 import { Link } from 'react-router-dom';
-import { FileText, MapPin, Phone } from 'lucide-react';
+import { ChevronRight, FileText, MapPin, Phone } from 'lucide-react';
 import type { ItineraryItem } from '../lib/model/itinerary';
 import { formatDayLabel, formatTimeOfDay } from '../lib/model/format';
 import { ItemIcon } from './ui';
-import { AttachDocument } from './AttachDocument';
 
 /**
  * One itinerary item.
  *
- * The time and title carry the weight; documents are shown as tappable chips
- * so a boarding pass is reachable from the timeline without a detour through a
- * detail screen.
+ * The whole card opens its own edit form, because tapping the thing you want
+ * to change is the only obvious way to change it. Documents, a phone number
+ * and a map sit *outside* that link — a link inside a link is neither valid
+ * nor operable, and each of those goes somewhere else entirely.
  */
 export function ItemRow({
   item,
@@ -22,93 +22,111 @@ export function ItemRow({
   const time = formatTimeOfDay(item.startsAt);
   // Rendered as a span rather than a moment only when both ends are known.
   const stay = item.type === 'lodging' && item.startsAt && item.endsAt;
+
+  const place = item.location;
   const mapQuery =
-    item.location?.lat !== undefined && item.location.lng !== undefined
-      ? `${item.location.lat},${item.location.lng}`
-      : item.location?.address || item.location?.name;
+    place?.lat !== undefined && place.lng !== undefined
+      ? `${place.lat},${place.lng}`
+      : place?.address || place?.name;
+
+  // A placeholder stay names itself after its city, so the location line under
+  // it would otherwise say the same words twice.
+  const placeLine =
+    place && place.name !== item.title ? (place.address ?? place.name) : place?.address;
 
   return (
-    <div className="flex gap-3 border-b border-border py-3 last:border-0">
-      <div className="w-16 shrink-0 pt-0.5 text-sm tabular-nums text-muted">
-        {time || '—'}
-      </div>
+    <div className="border-b border-border last:border-0">
+      <Link
+        to={`/trip/${folderId}/item/${item.id}?type=${item.type}`}
+        className="-mx-2 flex gap-3 rounded-xl px-2 py-3 hover:bg-surface-2"
+      >
+        <span className="w-16 shrink-0 pt-0.5 text-sm tabular-nums text-muted">
+          {time || '—'}
+        </span>
 
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start gap-2">
-          <ItemIcon type={item.type} className="mt-0.5 text-muted" />
-          <div className="min-w-0 flex-1">
-            <p className="font-medium break-words">{item.title}</p>
+        <ItemIcon type={item.type} className="mt-0.5 text-muted" />
 
-            {stay ? (
-              // A stay is a span, and the half people forget is the checkout.
-              // Showing only the arrival hides the time they have to be out,
-              // on a day that is rarely the one they arrived.
-              <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-2 text-sm text-muted">
-                <dt>Check in</dt>
-                <dd className="text-text">
-                  {formatDayLabel(item.startsAt!.slice(0, 10))} · {formatTimeOfDay(item.startsAt)}
-                </dd>
-                <dt>Check out</dt>
-                <dd className="text-text">
-                  {formatDayLabel(item.endsAt!.slice(0, 10))} · {formatTimeOfDay(item.endsAt)}
-                </dd>
-              </dl>
-            ) : null}
+        <span className="min-w-0 flex-1">
+          <span className="block font-medium break-words">{item.title}</span>
 
-            {item.confirmationNumber ? (
-              <p className="mt-0.5 text-sm text-muted">
-                Confirmation{' '}
-                <span className="font-mono text-text select-all">
-                  {item.confirmationNumber}
-                </span>
-              </p>
-            ) : null}
+          {stay ? (
+            // A stay is a span, and the half people forget is the checkout.
+            // A definition list says that these are labelled values rather
+            // than four loose pieces of text.
+            <dl className="mt-0.5 grid grid-cols-[auto_1fr] gap-x-2 text-sm text-muted">
+              <dt>Check in</dt>
+              <dd className="text-text">
+                {formatDayLabel(item.startsAt!.slice(0, 10))} ·{' '}
+                {formatTimeOfDay(item.startsAt)}
+              </dd>
+              <dt>Check out</dt>
+              <dd className="text-text">
+                {formatDayLabel(item.endsAt!.slice(0, 10))} ·{' '}
+                {formatTimeOfDay(item.endsAt)}
+              </dd>
+            </dl>
+          ) : null}
 
-            {item.location ? (
-              <a
-                href={`https://maps.google.com/?q=${encodeURIComponent(mapQuery ?? '')}`}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-1 inline-flex items-start gap-1 text-sm text-muted underline-offset-2 hover:underline"
-              >
-                <MapPin className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-                <span className="break-words">
-                  {item.location.address || item.location.name}
-                </span>
-              </a>
-            ) : null}
+          {item.confirmationNumber ? (
+            <span className="mt-0.5 block text-sm text-muted">
+              Confirmation{' '}
+              <span className="font-mono text-text">{item.confirmationNumber}</span>
+            </span>
+          ) : null}
 
-            {item.location?.phone ? (
-              <a
-                href={`tel:${item.location.phone}`}
-                className="mt-1 flex items-center gap-1 text-sm text-muted underline-offset-2 hover:underline"
-              >
-                <Phone className="size-3.5 shrink-0" aria-hidden />
-                {item.location.phone}
-              </a>
-            ) : null}
+          {placeLine ? (
+            <span className="mt-1 flex items-start gap-1 text-sm text-muted">
+              <MapPin className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+              <span className="break-words">{placeLine}</span>
+            </span>
+          ) : null}
 
-            {item.notes ? (
-              <p className="mt-1 text-sm text-muted break-words">{item.notes}</p>
-            ) : null}
+          {item.notes ? (
+            <span className="mt-1 block text-sm break-words text-muted">{item.notes}</span>
+          ) : null}
+        </span>
 
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              {item.attachments.map((attachment) => (
-                  <Link
-                    key={attachment.driveFileId}
-                    to={`/trip/${folderId}/doc/${attachment.driveFileId}`}
-                    className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-surface-2 px-2.5 text-sm hover:bg-border"
-                  >
-                    <FileText className="size-3.5 shrink-0" aria-hidden />
-                  <span className="max-w-44 truncate">
-                    {attachment.label ?? attachment.name}
-                  </span>
-                </Link>
-              ))}
-              <AttachDocument folderId={folderId} itemId={item.id} label="Add" />
-            </div>
-          </div>
-        </div>
+        <ChevronRight
+          className="mt-0.5 size-4 shrink-0 self-start text-muted"
+          aria-hidden
+        />
+      </Link>
+
+      <div className="flex flex-wrap items-center gap-2 pl-[4.75rem] empty:hidden [&:not(:empty)]:pb-3">
+        {item.attachments.map((attachment) => (
+          <Link
+            key={attachment.driveFileId}
+            to={`/trip/${folderId}/doc/${attachment.driveFileId}`}
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-surface-2 px-2.5 text-sm hover:bg-border"
+          >
+            <FileText className="size-3.5 shrink-0" aria-hidden />
+            <span className="max-w-44 truncate">
+              {attachment.label ?? attachment.name}
+            </span>
+          </Link>
+        ))}
+
+        {place?.phone ? (
+          <a
+            href={`tel:${place.phone}`}
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-surface-2 px-2.5 text-sm hover:bg-border"
+          >
+            <Phone className="size-3.5 shrink-0" aria-hidden />
+            {place.phone}
+          </a>
+        ) : null}
+
+        {mapQuery ? (
+          <a
+            href={`https://maps.google.com/?q=${encodeURIComponent(mapQuery)}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-surface-2 px-2.5 text-sm hover:bg-border"
+          >
+            <MapPin className="size-3.5 shrink-0" aria-hidden />
+            Map
+          </a>
+        ) : null}
       </div>
     </div>
   );

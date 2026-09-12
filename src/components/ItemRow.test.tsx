@@ -125,3 +125,135 @@ describe('a lodging stay', () => {
     expect(screen.queryByText(/Check out/)).not.toBeInTheDocument();
   });
 });
+
+describe('editing from the timeline', () => {
+  const TRIP = {
+    schemaVersion: 1,
+    tripId: 't1',
+    name: 'Europe Test 1',
+    items: [
+      {
+        id: 'paint',
+        type: 'activity',
+        title: 'Paint class',
+        startsAt: '2026-09-21T13:00:00+02:00',
+        attachments: [],
+      },
+    ],
+  };
+
+  test('the item opens its own edit form', async () => {
+    await renderLens(<TimelineScreen />, { itinerary: TRIP });
+
+    // Tapping the thing you want to change is the only obvious way to change
+    // it; there was previously no way at all from here.
+    const link = await screen.findByRole('link', { name: /Paint class/ });
+    expect(link).toHaveAttribute('href', expect.stringContaining('/item/paint'));
+  });
+
+  test('carries the type, so the form asks the right questions', async () => {
+    await renderLens(<TimelineScreen />, { itinerary: TRIP });
+
+    expect(await screen.findByRole('link', { name: /Paint class/ })).toHaveAttribute(
+      'href',
+      expect.stringContaining('type=activity'),
+    );
+  });
+
+  test('a stay opens as a stay', async () => {
+    await renderLens(<TimelineScreen />, {
+      itinerary: {
+        ...TRIP,
+        items: [
+          {
+            id: 'naples',
+            type: 'lodging',
+            title: 'Stay in Naples',
+            startsAt: '2026-09-18T15:00:00+02:00',
+            endsAt: '2026-09-26T11:00:00+02:00',
+            attachments: [],
+          },
+        ],
+      },
+    });
+
+    expect(await screen.findByRole('link', { name: /Stay in Naples/ })).toHaveAttribute(
+      'href',
+      expect.stringContaining('type=lodging'),
+    );
+  });
+
+  test('does not repeat the place when it only says the title again', async () => {
+    await renderLens(<TimelineScreen />, {
+      itinerary: {
+        ...TRIP,
+        items: [
+          {
+            id: 'naples',
+            type: 'lodging',
+            title: 'Stay in Naples',
+            startsAt: '2026-09-18T15:00:00+02:00',
+            endsAt: '2026-09-26T11:00:00+02:00',
+            location: { name: 'Stay in Naples', city: 'Naples' },
+            attachments: [],
+          },
+        ],
+      },
+    });
+
+    await screen.findByText('Stay in Naples');
+    // A placeholder stay names itself after the city, so the location line
+    // underneath was saying the same words twice.
+    expect(screen.getAllByText('Stay in Naples')).toHaveLength(1);
+  });
+});
+
+describe('a row stays quiet when there is nothing to show', () => {
+  test('an item with no documents shows no chips at all', async () => {
+    await renderLens(<TimelineScreen />, {
+      itinerary: {
+        schemaVersion: 1,
+        tripId: 't1',
+        name: 'Trip',
+        items: [
+          {
+            id: 'paint',
+            type: 'activity',
+            title: 'Paint class',
+            startsAt: '2026-09-21T13:00:00+02:00',
+            attachments: [],
+          },
+        ],
+      },
+    });
+
+    await screen.findByText('Paint class');
+    // The dashed "Add" box used to sit under every single item, including the
+    // ones with nothing attached and nothing to attach it to yet.
+    expect(screen.queryByText('Add')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Map/ })).not.toBeInTheDocument();
+  });
+
+  test('still shows a document when there is one', async () => {
+    await renderLens(<TimelineScreen />, {
+      itinerary: {
+        schemaVersion: 1,
+        tripId: 't1',
+        name: 'Trip',
+        items: [
+          {
+            id: 'flight',
+            type: 'flight',
+            title: 'UA 123',
+            startsAt: '2026-09-17T12:00:00-07:00',
+            attachments: [
+              { driveFileId: 'bp', name: 'boarding.pdf', mimeType: 'application/pdf' },
+            ],
+          },
+        ],
+      },
+    });
+
+    expect(await screen.findByRole('link', { name: /boarding\.pdf/ })).toBeInTheDocument();
+  });
+});

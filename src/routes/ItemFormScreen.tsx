@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ChevronLeft } from 'lucide-react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { ChevronLeft, FileText } from 'lucide-react';
 import { useAppState, useServices } from '../hooks/useServices';
 import { useLoadedTrip } from '../hooks/useLoadedTrip';
 import { ITEM_TYPES, type ItemType } from '../lib/model/itinerary';
@@ -14,6 +14,7 @@ import {
   TextAreaField,
   TextField,
 } from '../components/fields';
+import { AttachDocument } from '../components/AttachDocument';
 
 const TYPE_LABELS: Record<ItemType, string> = {
   flight: 'Flight',
@@ -422,6 +423,29 @@ export function ItemFormScreen() {
             isStay ? 'Check-in from 3:00 PM' : 'Opening hours, prices, reminders'
           }
         />
+
+        {itemId ? (
+          // Only once the item exists: there is nothing to attach a file to
+          // until it has been saved and has an id.
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-muted">Documents</span>
+            <div className="flex flex-wrap items-center gap-2">
+              {existing?.attachments.map((attachment) => (
+                <Link
+                  key={attachment.driveFileId}
+                  to={`/trip/${folderId}/doc/${attachment.driveFileId}`}
+                  className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-surface-2 px-2.5 text-sm"
+                >
+                  <FileText className="size-3.5 shrink-0" aria-hidden />
+                  <span className="max-w-44 truncate">
+                    {attachment.label ?? attachment.name}
+                  </span>
+                </Link>
+              ))}
+              <AttachDocument folderId={folderId} itemId={itemId} />
+            </div>
+          </div>
+        ) : null}
 
         {isQuick && !showAll ? (
           <button
