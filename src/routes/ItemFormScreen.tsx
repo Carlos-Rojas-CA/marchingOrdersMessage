@@ -115,6 +115,17 @@ export function ItemFormScreen() {
   /** Part of first-run setup, where a rough flight is worth more than none. */
   const isOutbound = params.get('outbound') === '1';
   const words = JOURNEY_WORDS[type];
+  /**
+   * Travel that usually has no paperwork at all.
+   *
+   * "Uber" is the whole answer. Presenting two places, two times and a
+   * confirmation number for that makes a one-word entry feel like a form to
+   * be escaped rather than filled, so the rest waits behind a disclosure for
+   * the rental that genuinely has a booking.
+   */
+  const isQuick = type === 'car' || type === 'transit';
+  const [showAll, setShowAll] = useState(false);
+  const detailed = !isQuick || showAll;
 
   const doc = state.current?.doc;
   const existing = itemId ? doc?.items.find((i) => i.id === itemId) : undefined;
@@ -304,7 +315,18 @@ export function ItemFormScreen() {
           placeholder={isStay ? 'Hotel Artemide' : (words?.placeholder ?? 'Colosseum')}
         />
 
-        {isJourney ? (
+        {isJourney && !detailed ? (
+          <DateTimeField
+            label="When"
+            date={startDate}
+            time={startTime}
+            timeZone={startZone}
+            onDateChange={pickStartDate}
+            onTimeChange={setStartTime}
+          />
+        ) : null}
+
+        {isJourney && detailed ? (
           <>
             <PlaceField
               label={words?.from ?? 'From'}
@@ -372,11 +394,13 @@ export function ItemFormScreen() {
           </>
         ) : null}
 
-        <TextField
-          label="Confirmation number (optional)"
-          value={confirmation}
-          onChange={setConfirmation}
-        />
+        {detailed ? (
+          <TextField
+            label="Confirmation number (optional)"
+            value={confirmation}
+            onChange={setConfirmation}
+          />
+        ) : null}
         <TextAreaField
           label="Notes (optional)"
           value={notes}
@@ -385,6 +409,16 @@ export function ItemFormScreen() {
             isStay ? 'Check-in from 3:00 PM' : 'Opening hours, prices, reminders'
           }
         />
+
+        {isQuick && !showAll ? (
+          <button
+            type="button"
+            onClick={() => setShowAll(true)}
+            className="self-start text-sm text-accent underline-offset-2 hover:underline"
+          >
+            Add more detail — places, times, confirmation
+          </button>
+        ) : null}
 
         {error ? (
           <p className="text-sm text-danger" role="alert">

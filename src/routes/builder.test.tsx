@@ -446,9 +446,12 @@ describe('a trip whose middle is undecided', () => {
 describe('journey forms do not all read like a flight', () => {
   test('a car asks where you are driving, not for a flight number', async () => {
     await renderAt(`/trip/${FOLDER}/item/new?type=car`);
+    const user = userEvent.setup();
 
     expect(await screen.findByLabelText('What is it?')).toBeInTheDocument();
-    expect(screen.getByLabelText('Driving from')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /more detail/i }));
+
+    expect(await screen.findByLabelText('Driving from')).toBeInTheDocument();
     expect(screen.getByLabelText('Driving to')).toBeInTheDocument();
   });
 
@@ -461,9 +464,57 @@ describe('journey forms do not all read like a flight', () => {
 
   test('other travel keeps it plain', async () => {
     await renderAt(`/trip/${FOLDER}/item/new?type=transit`);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: /more detail/i }));
 
     expect(await screen.findByLabelText('From')).toBeInTheDocument();
     expect(screen.getByLabelText('To')).toBeInTheDocument();
     expect(screen.getByLabelText('Leaves date')).toBeInTheDocument();
+  });
+});
+
+describe('travel that needs no detail', () => {
+  test('an Uber asks for a word, not an itinerary', async () => {
+    await renderAt(`/trip/${FOLDER}/item/new?type=car`);
+
+    expect(await screen.findByLabelText('What is it?')).toBeInTheDocument();
+    // Somewhere to say "Uber" and nothing else demanded alongside it.
+    expect(screen.queryByLabelText('Driving from')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Gets in date')).not.toBeInTheDocument();
+  });
+
+  test('the rest is there for a rental that does have a booking', async () => {
+    await renderAt(`/trip/${FOLDER}/item/new?type=car`);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: /more detail/i }));
+
+    expect(await screen.findByLabelText('Driving from')).toBeInTheDocument();
+    expect(screen.getByLabelText('Confirmation number (optional)')).toBeInTheDocument();
+  });
+
+  test('saves with nothing but a name and the day', async () => {
+    const { itinerary } = await renderAt(
+      `/trip/${FOLDER}/item/new?type=car&date=2026-05-13`,
+    );
+    const user = userEvent.setup();
+
+    await user.type(await screen.findByLabelText('What is it?'), 'Uber');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(async () => {
+      const [item] = (await itinerary()).items;
+      expect(item.title).toBe('Uber');
+      // Still dated, so it still answers a transition warning.
+      expect(item.startsAt).toMatch(/^2026-05-13T/);
+    });
+  });
+
+  test('a flight still asks for everything, because it needs it', async () => {
+    await renderAt(`/trip/${FOLDER}/item/new?type=flight`);
+
+    expect(await screen.findByLabelText('Departs from')).toBeInTheDocument();
+    expect(screen.getByLabelText('Arrival date')).toBeInTheDocument();
   });
 });
