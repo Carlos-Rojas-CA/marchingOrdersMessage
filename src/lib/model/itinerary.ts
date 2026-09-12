@@ -18,6 +18,7 @@ export const ITEM_TYPES = [
   'train',
   'ferry',
   'bus',
+  'car',
   'lodging',
   'activity',
   'poi',

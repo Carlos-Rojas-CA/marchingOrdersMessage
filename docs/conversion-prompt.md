@@ -35,7 +35,7 @@ Each item:
 
 {
   "id": "<unique-kebab-case-slug>",
-  "type": "flight" | "train" | "ferry" | "bus" | "lodging" | "activity" | "poi" | "note" | "document",
+  "type": "flight" | "train" | "ferry" | "bus" | "car" | "lodging" | "activity" | "poi" | "note" | "document",
   "title": "<short label a person would recognise>",
   "startsAt": "YYYY-MM-DDTHH:MM:SS±HH:MM",
   "endsAt":   "YYYY-MM-DDTHH:MM:SS±HH:MM",
@@ -68,9 +68,14 @@ RULES
    document states the property's standard check-in/check-out policy, repeat it
    in "notes" as well.
 
-3. TRANSPORT TYPES. Use "flight", "train", "ferry" or "bus" for anything that
-   carries you between places. Their documents are grouped together in the app,
-   so getting the specific type right only affects the icon.
+3. TRANSPORT TYPES. Use "flight", "train", "ferry", "bus" or "car" for anything
+   that carries you between places, including a drive or a private transfer
+   with nothing to book. Their documents are grouped together in the app, so
+   getting the specific type right only affects the icon.
+
+   Record these even when there is no ticket. The app compares where you sleep
+   from one night to the next, and tells you when you are in a different town
+   with nothing recorded that moved you there.
 
 4. USE "activity" for anything booked or timed at a destination — museums,
    tours, parks, restaurant reservations.

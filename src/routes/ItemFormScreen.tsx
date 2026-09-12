@@ -20,6 +20,7 @@ const TYPE_LABELS: Record<ItemType, string> = {
   train: 'Train',
   ferry: 'Ferry',
   bus: 'Bus',
+  car: 'Car or transfer',
   lodging: 'Stay',
   activity: 'Activity',
   poi: 'Place',
@@ -28,7 +29,7 @@ const TYPE_LABELS: Record<ItemType, string> = {
 };
 
 /** Types that go from one place to another, and so carry two zones. */
-const JOURNEYS: ItemType[] = ['flight', 'train', 'ferry', 'bus'];
+const JOURNEYS: ItemType[] = ['flight', 'train', 'ferry', 'bus', 'car'];
 
 const LAST_PLACE_KEY = 'marching-orders:last-place';
 

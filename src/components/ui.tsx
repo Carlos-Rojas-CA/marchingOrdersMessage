@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import {
   Bed,
   Bus,
+  Car,
   FileText,
   MapPin,
   Plane,
@@ -101,6 +102,7 @@ const ITEM_ICONS: Record<ItemType, LucideIcon> = {
   train: TrainFront,
   ferry: Ship,
   bus: Bus,
+  car: Car,
   lodging: Bed,
   activity: Ticket,
   poi: MapPin,

@@ -21,6 +21,8 @@ describe('inferDocType', () => {
     expect(inferDocType('train')).toBe('travel');
     expect(inferDocType('ferry')).toBe('travel');
     expect(inferDocType('bus')).toBe('travel');
+    // A rental agreement belongs with them.
+    expect(inferDocType('car')).toBe('travel');
   });
 
   test('files a stay separately from the journey to it', () => {

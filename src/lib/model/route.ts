@@ -129,6 +129,10 @@ const MOVES_YOU: ReadonlySet<ItemType> = new Set<ItemType>([
   'train',
   'ferry',
   'bus',
+  // Driving needs no ticket, but it is still how you got there. Without a way
+  // to record it, a move made by car would be flagged forever — and a warning
+  // that cannot be satisfied is one people learn to ignore.
+  'car',
 ]);
 
 export interface BedGap {
