@@ -104,6 +104,12 @@ export class FakeDriveClient implements DriveClient {
     return this.#put('__root__', name, 'application/vnd.google-apps.folder', new Blob([]), '');
   }
 
+  async trashFolder(folderId: string): Promise<void> {
+    for (const [id, file] of this.#files) {
+      if (file.folderId === folderId || file.name === folderId) this.#files.delete(id);
+    }
+  }
+
   async listFolder(folderId: string): Promise<DriveFile[]> {
     return [...this.#files.values()]
       .filter((f) => f.folderId === folderId)

@@ -217,6 +217,29 @@ export class TripStore {
     return attachments.reduce((total, a) => total + (a.bytes?.byteLength ?? 0), 0);
   }
 
+  /**
+   * Forgets one trip entirely, leaving every other trip untouched.
+   *
+   * Scoped by folder rather than clearing stores wholesale, because the
+   * failure that would hurt here is over-deleting someone's other trips.
+   */
+  async removeTrip(folderId: string): Promise<void> {
+    const attachments = await this.listAttachments(folderId);
+    const queued = await this.db.getAllFromIndex('outbox', 'byFolder', folderId);
+
+    const tx = this.db.transaction(
+      ['trips', 'itineraries', 'attachments', 'outbox'],
+      'readwrite',
+    );
+    await Promise.all([
+      tx.objectStore('trips').delete(folderId),
+      tx.objectStore('itineraries').delete(folderId),
+      ...attachments.map((a) => tx.objectStore('attachments').delete(a.driveFileId)),
+      ...queued.map((entry) => tx.objectStore('outbox').delete(entry.id!)),
+      tx.done,
+    ]);
+  }
+
   /** Frees a trip's offline bytes while keeping enough to re-download later. */
   async evictTripBlobs(folderId: string): Promise<void> {
     const attachments = await this.listAttachments(folderId);

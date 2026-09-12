@@ -292,3 +292,71 @@ describe('clearAll', () => {
     expect(await store.getAccount()).toBeUndefined();
   });
 });
+
+describe('removeTrip', () => {
+  async function twoTrips() {
+    for (const folderId of ['keep', 'drop']) {
+      await store.putTrip({
+        folderId,
+        name: folderId,
+        itineraryFileId: `${folderId}-file`,
+        lastSyncedAt: null,
+        canEdit: true,
+        offlineEnabled: false,
+      });
+      await store.putItinerary({
+        folderId,
+        doc: doc(folderId),
+        driveModifiedTime: null,
+        driveVersion: null,
+      });
+      await store.putAttachment({
+        driveFileId: `${folderId}-a1`,
+        folderId,
+        itemId: null,
+        name: 'doc.pdf',
+        mimeType: 'application/pdf',
+        size: 4,
+        md5Checksum: null,
+        bytes: null,
+        cachedAt: null,
+      });
+      await store.enqueue({ folderId, kind: 'itinerary', payload: {} });
+    }
+  }
+
+  test('forgets everything held for that trip', async () => {
+    await twoTrips();
+
+    await store.removeTrip('drop');
+
+    expect(await store.getTrip('drop')).toBeUndefined();
+    expect(await store.getItinerary('drop')).toBeUndefined();
+    expect(await store.listAttachments('drop')).toEqual([]);
+  });
+
+  test('leaves every other trip alone', async () => {
+    await twoTrips();
+
+    await store.removeTrip('drop');
+
+    // The bug that would hurt most here is over-deleting, so it gets its own
+    // test rather than riding along with the one above.
+    expect(await store.getTrip('keep')).toBeDefined();
+    expect(await store.getItinerary('keep')).toBeDefined();
+    expect(await store.listAttachments('keep')).toHaveLength(1);
+  });
+
+  test('drops that trip’s queued writes but not the others', async () => {
+    await twoTrips();
+
+    await store.removeTrip('drop');
+
+    const pending = await store.pending();
+    expect(pending.map((e) => e.folderId)).toEqual(['keep']);
+  });
+
+  test('is harmless on a trip that is not held', async () => {
+    await expect(store.removeTrip('never-seen')).resolves.toBeUndefined();
+  });
+});

@@ -115,6 +115,21 @@ export class AppStore {
     this.#update({ account: email, trips: await this.store.listTrips() });
   }
 
+  /** Removes one trip, optionally trashing its Drive folder too. */
+  async deleteTrip(folderId: string, options: { fromDrive: boolean }): Promise<void> {
+    try {
+      await this.sync.deleteTrip(folderId, options);
+    } finally {
+      // The local records are gone whether or not Drive cooperated, so the
+      // list must reflect that either way.
+      this.#update({
+        trips: await this.store.listTrips(),
+        current:
+          this.#state.current?.trip.folderId === folderId ? null : this.#state.current,
+      });
+    }
+  }
+
   /** Forgets everything held for the current account. */
   async signOut(): Promise<void> {
     await this.store.clearAll();

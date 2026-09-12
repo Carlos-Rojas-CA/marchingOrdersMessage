@@ -128,6 +128,33 @@ export class SyncEngine {
   }
 
   /**
+   * Stops tracking a trip, optionally trashing its Drive folder too.
+   *
+   * The local records go either way. A failed trash still leaves the trip
+   * forgotten here rather than listed and pointing at a folder the user
+   * believes is gone — a half-deleted trip is worse than either outcome — and
+   * the error is re-thrown so the failure is not silent.
+   */
+  async deleteTrip(
+    folderId: string,
+    { fromDrive }: { fromDrive: boolean },
+  ): Promise<void> {
+    let failure: unknown = null;
+    if (fromDrive) {
+      try {
+        await this.drive.trashFolder(folderId);
+      } catch (cause) {
+        failure = cause;
+      }
+    }
+
+    await this.store.removeTrip(folderId);
+    this.#queues.delete(folderId);
+
+    if (failure) throw failure;
+  }
+
+  /**
    * Refreshes metadata for one trip.
    *
    * Costs one folder listing plus, at most, one small JSON download. Attachment

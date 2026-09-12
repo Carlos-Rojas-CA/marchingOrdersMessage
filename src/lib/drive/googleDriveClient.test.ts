@@ -190,3 +190,24 @@ describe('GoogleDriveClient.getCurrentUser', () => {
     expect((await client.getCurrentUser()).email).toBe('carlos@example.com');
   });
 });
+
+describe('GoogleDriveClient.trashFolder', () => {
+  test('moves the folder to the trash rather than destroying it', async () => {
+    const { client, calls } = clientWith([json({ id: 'folder-1', trashed: true })]);
+
+    await client.trashFolder('folder-1');
+
+    // Recoverable for 30 days. A trip holds boarding passes, and an
+    // unrecoverable delete is the wrong default for that.
+    expect(calls[0]!.init.method).toBe('PATCH');
+    expect(JSON.parse(String(calls[0]!.init.body))).toEqual({ trashed: true });
+  });
+
+  test('targets the folder it was given', async () => {
+    const { client, calls } = clientWith([json({ id: 'folder-1' })]);
+
+    await client.trashFolder('folder-1');
+
+    expect(new URL(calls[0]!.url).pathname).toContain('/files/folder-1');
+  });
+});

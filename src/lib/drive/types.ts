@@ -45,6 +45,13 @@ export interface DriveClient {
    * one flow that cannot be blocked by how folder-picking grants turn out.
    */
   createFolder(name: string): Promise<DriveFile>;
+  /**
+   * Moves a folder to Drive's trash.
+   *
+   * Trashed rather than deleted: a trip holds boarding passes, and Drive keeps
+   * trashed items recoverable for 30 days.
+   */
+  trashFolder(folderId: string): Promise<void>;
   getFile(fileId: string): Promise<DriveFile>;
   downloadFile(fileId: string): Promise<Blob>;
   downloadText(fileId: string): Promise<string>;

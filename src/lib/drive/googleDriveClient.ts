@@ -120,6 +120,14 @@ export class GoogleDriveClient implements DriveClient {
     return (await response.json()) as DriveFile;
   }
 
+  async trashFolder(folderId: string): Promise<void> {
+    await this.#request(`${API}/files/${folderId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trashed: true }),
+    });
+  }
+
   async getFile(fileId: string): Promise<DriveFile> {
     const url = new URL(`${API}/files/${fileId}`);
     url.searchParams.set('fields', FILE_FIELDS);

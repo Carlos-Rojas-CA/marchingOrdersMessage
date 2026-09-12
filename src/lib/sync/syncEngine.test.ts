@@ -672,3 +672,49 @@ describe('concurrent operations on one trip', () => {
     await expect(sync.addItem(folderId, item)).rejects.toBeInstanceOf(ConflictError);
   });
 });
+
+describe('deleteTrip', () => {
+  async function aTrip() {
+    const folderId = await sync.createTrip('Test trip');
+    await sync.addItem(folderId, { type: 'lodging', title: 'Somewhere' });
+    return folderId;
+  }
+
+  test('forgets the trip locally', async () => {
+    const folderId = await aTrip();
+
+    await sync.deleteTrip(folderId, { fromDrive: false });
+
+    expect(await store.getTrip(folderId)).toBeUndefined();
+    expect(await store.getItinerary(folderId)).toBeUndefined();
+  });
+
+  test('leaves the Drive folder alone when only removing it from the device', async () => {
+    const folderId = await aTrip();
+
+    await sync.deleteTrip(folderId, { fromDrive: false });
+
+    // Removing an app's copy must never quietly destroy the original.
+    expect(await drive.listFolder(folderId)).not.toHaveLength(0);
+  });
+
+  test('trashes the Drive folder when asked to', async () => {
+    const folderId = await aTrip();
+    const trashing = vi.spyOn(drive, 'trashFolder');
+
+    await sync.deleteTrip(folderId, { fromDrive: true });
+
+    expect(trashing).toHaveBeenCalledWith(folderId);
+  });
+
+  test('still forgets it locally when Drive refuses', async () => {
+    const folderId = await aTrip();
+    vi.spyOn(drive, 'trashFolder').mockRejectedValue(new Error('offline'));
+
+    await expect(sync.deleteTrip(folderId, { fromDrive: true })).rejects.toThrow();
+
+    // Leaving a half-deleted trip listed, pointing at a folder the user
+    // believes is gone, is worse than either outcome on its own.
+    expect(await store.getTrip(folderId)).toBeUndefined();
+  });
+});

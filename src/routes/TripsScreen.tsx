@@ -6,6 +6,7 @@ import { isConfigured } from '../config';
 import { Button, Card, EmptyState } from '../components/ui';
 import { InstallBanner } from '../components/InstallBanner';
 import { AccountBar } from '../components/AccountBar';
+import { DeleteTrip } from '../components/DeleteTrip';
 
 /** The trip list, and the only place a new trip is created. */
 export function TripsScreen() {
@@ -80,10 +81,10 @@ export function TripsScreen() {
 
       <ul className="space-y-2">
         {state.trips.map((trip) => (
-          <li key={trip.folderId}>
+          <li key={trip.folderId} className="flex items-center gap-2">
             <Link
               to={`/trip/${trip.folderId}`}
-              className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-4 hover:bg-surface-2"
+              className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-border bg-surface p-4 hover:bg-surface-2"
             >
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-medium">{trip.name}</span>
@@ -96,6 +97,7 @@ export function TripsScreen() {
                 <Check className="size-4 shrink-0 text-ok" aria-label="Saved offline" />
               ) : null}
             </Link>
+            <DeleteTrip trip={trip} />
           </li>
         ))}
       </ul>
