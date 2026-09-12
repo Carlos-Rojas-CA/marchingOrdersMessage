@@ -309,3 +309,166 @@ describe('createTrip', () => {
     expect((await store.getItinerary(folderId))?.doc.items).toEqual([]);
   });
 });
+
+describe('attachDocument', () => {
+  async function newTrip() {
+    const folderId = await sync.createTrip('Japan 2026');
+    await sync.push(
+      folderId,
+      parseItinerary({
+        schemaVersion: 1,
+        tripId: 't1',
+        name: 'Japan 2026',
+        items: [{ id: 'flight', type: 'flight', title: 'AA123' }],
+      }),
+    );
+    return folderId;
+  }
+
+  test('uploads the file into the trip folder', async () => {
+    const folderId = await newTrip();
+
+    await sync.attachDocument(folderId, 'flight', new File(['%PDF'], 'boarding.pdf'));
+
+    const names = (await drive.listFolder(folderId)).map((f) => f.name);
+    expect(names).toContain('boarding.pdf');
+  });
+
+  test('records the attachment against the item that owns it', async () => {
+    const folderId = await newTrip();
+
+    await sync.attachDocument(folderId, 'flight', new File(['%PDF'], 'boarding.pdf'));
+
+    const item = (await store.getItinerary(folderId))!.doc.items[0]!;
+    expect(item.attachments).toHaveLength(1);
+    expect(item.attachments[0]!.name).toBe('boarding.pdf');
+  });
+
+  test('infers the document kind from the item so nothing needs tagging', async () => {
+    const folderId = await newTrip();
+
+    await sync.attachDocument(folderId, 'flight', new File(['%PDF'], 'boarding.pdf'));
+
+    const item = (await store.getItinerary(folderId))!.doc.items[0]!;
+    expect(item.attachments[0]!.docType).toBe('boardingPass');
+  });
+
+  test('honours an explicitly chosen kind over the inferred one', async () => {
+    const folderId = await newTrip();
+
+    await sync.attachDocument(folderId, 'flight', new File(['%PDF'], 'receipt.pdf'), {
+      docType: 'other',
+    });
+
+    const item = (await store.getItinerary(folderId))!.doc.items[0]!;
+    expect(item.attachments[0]!.docType).toBe('other');
+  });
+
+  test('attaches to the trip itself when no item is named', async () => {
+    const folderId = await newTrip();
+
+    await sync.attachDocument(folderId, null, new File(['%PDF'], 'passport.pdf'), {
+      docType: 'identity',
+    });
+
+    const doc = (await store.getItinerary(folderId))!.doc;
+    expect(doc.attachments).toHaveLength(1);
+    expect(doc.items[0]!.attachments).toHaveLength(0);
+  });
+
+  test('tags the uploaded file so the trip can be rebuilt from the folder alone', async () => {
+    const folderId = await newTrip();
+
+    await sync.attachDocument(folderId, 'flight', new File(['%PDF'], 'boarding.pdf'));
+
+    const file = (await drive.listFolder(folderId)).find((f) => f.name === 'boarding.pdf')!;
+    expect(file.appProperties?.itemId).toBe('flight');
+  });
+
+  test('makes the document readable locally straight away', async () => {
+    const folderId = await newTrip();
+
+    await sync.attachDocument(folderId, 'flight', new File(['%PDF'], 'boarding.pdf'));
+
+    // Just-uploaded bytes are already in hand; re-downloading them to view the
+    // thing you just added would be absurd.
+    const attachments = await store.listAttachments(folderId);
+    const record = attachments.find((a) => a.name === 'boarding.pdf')!;
+    expect(record.bytes).not.toBeNull();
+  });
+
+  test('refuses to attach to an item that does not exist', async () => {
+    const folderId = await newTrip();
+
+    await expect(
+      sync.attachDocument(folderId, 'ghost', new File(['%PDF'], 'x.pdf')),
+    ).rejects.toThrow(/ghost/);
+  });
+});
+
+describe('replaceItinerary', () => {
+  test('accepts a pasted document and stores it', async () => {
+    const folderId = await sync.createTrip('Japan 2026');
+
+    await sync.replaceItinerary(folderId, {
+      schemaVersion: 1,
+      tripId: 'pasted',
+      name: 'Japan 2026',
+      items: [{ id: 'i1', type: 'flight', title: 'AA123' }],
+    });
+
+    expect((await store.getItinerary(folderId))!.doc.items).toHaveLength(1);
+  });
+
+  test('rejects a document that does not validate, leaving the trip untouched', async () => {
+    const folderId = await sync.createTrip('Japan 2026');
+
+    await expect(
+      sync.replaceItinerary(folderId, { totally: 'wrong' }),
+    ).rejects.toThrow();
+
+    expect((await store.getItinerary(folderId))!.doc.name).toBe('Japan 2026');
+  });
+
+  test('keeps the trip name the folder was created with', async () => {
+    const folderId = await sync.createTrip('Japan 2026');
+
+    await sync.replaceItinerary(folderId, {
+      schemaVersion: 1,
+      tripId: 'pasted',
+      name: 'Something Else',
+      items: [],
+    });
+
+    // The Drive folder is named after the trip and is the unit of sharing;
+    // letting a paste rename one but not the other would split them.
+    expect((await store.getItinerary(folderId))!.doc.name).toBe('Japan 2026');
+  });
+});
+
+describe('replaceItinerary on a trip that is not loaded locally', () => {
+  test('reconciles first rather than failing', async () => {
+    // Reached by deep link, or by reloading the app on the import screen.
+    drive.seedJson('folder-9', ITINERARY_FILENAME, {
+      schemaVersion: 1,
+      tripId: 't9',
+      name: 'Japan 2026',
+      items: [],
+    });
+
+    await sync.replaceItinerary('folder-9', {
+      schemaVersion: 1,
+      tripId: 't9',
+      name: 'Japan 2026',
+      items: [{ id: 'i1', type: 'flight', title: 'AA123' }],
+    });
+
+    expect((await store.getItinerary('folder-9'))!.doc.items).toHaveLength(1);
+  });
+
+  test('still refuses a folder that holds no itinerary at all', async () => {
+    await expect(
+      sync.replaceItinerary('folder-empty', { schemaVersion: 1, tripId: 'x', name: 'X', items: [] }),
+    ).rejects.toThrow();
+  });
+});

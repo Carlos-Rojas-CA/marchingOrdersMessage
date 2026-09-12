@@ -8,6 +8,7 @@ import { NowScreen } from './routes/NowScreen';
 import { TimelineScreen } from './routes/TimelineScreen';
 import { DocumentsScreen } from './routes/DocumentsScreen';
 import { DocumentViewerScreen } from './routes/DocumentViewerScreen';
+import { ImportScreen } from './routes/ImportScreen';
 
 function Splash() {
   return (
@@ -42,6 +43,7 @@ function Router() {
       {/* The viewer sits outside TripShell: it takes the whole screen, with no
           tab bar competing for space or for taps. */}
       <Route path="/trip/:folderId/doc/:fileId" element={<DocumentViewerScreen />} />
+      <Route path="/trip/:folderId/import" element={<ImportScreen />} />
 
       <Route path="/trip/:folderId" element={<TripShell />}>
         <Route index element={<NowScreen />} />

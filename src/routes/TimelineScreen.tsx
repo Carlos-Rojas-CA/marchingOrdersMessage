@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { CalendarDays } from 'lucide-react';
 import { useAppState } from '../hooks/useServices';
 import { groupByDay } from '../lib/model/days';
@@ -20,7 +20,14 @@ export function TimelineScreen() {
   if (grouped.days.length === 0 && grouped.unscheduled.length === 0) {
     return (
       <EmptyState icon={CalendarDays} title="This trip is empty">
-        Flights, hotels and everything else will appear here once they are added.
+        Paste an itinerary to fill it in — that is also how you move a trip over
+        from a document you already keep.
+        <Link
+          to={`/trip/${folderId}/import`}
+          className="mt-3 inline-flex min-h-11 items-center rounded-xl bg-accent px-4 text-sm font-medium text-accent-contrast"
+        >
+          Paste an itinerary
+        </Link>
       </EmptyState>
     );
   }

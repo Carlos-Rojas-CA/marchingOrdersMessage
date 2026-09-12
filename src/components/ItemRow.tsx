@@ -3,6 +3,7 @@ import { FileText, MapPin } from 'lucide-react';
 import type { ItineraryItem } from '../lib/model/itinerary';
 import { formatTimeOfDay } from '../lib/model/format';
 import { ItemIcon } from './ui';
+import { AttachDocument } from './AttachDocument';
 
 /**
  * One itinerary item.
@@ -63,22 +64,21 @@ export function ItemRow({
               <p className="mt-1 text-sm text-muted break-words">{item.notes}</p>
             ) : null}
 
-            {item.attachments.length > 0 ? (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {item.attachments.map((attachment) => (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {item.attachments.map((attachment) => (
                   <Link
                     key={attachment.driveFileId}
                     to={`/trip/${folderId}/doc/${attachment.driveFileId}`}
                     className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-surface-2 px-2.5 text-sm hover:bg-border"
                   >
                     <FileText className="size-3.5 shrink-0" aria-hidden />
-                    <span className="max-w-44 truncate">
-                      {attachment.label ?? attachment.name}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            ) : null}
+                  <span className="max-w-44 truncate">
+                    {attachment.label ?? attachment.name}
+                  </span>
+                </Link>
+              ))}
+              <AttachDocument folderId={folderId} itemId={item.id} label="Add" />
+            </div>
           </div>
         </div>
       </div>

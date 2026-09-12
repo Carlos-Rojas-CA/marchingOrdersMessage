@@ -1,5 +1,6 @@
 import type { DriveClient, DriveFile } from '../drive/types';
-import { parseItinerary, type Itinerary } from '../model/itinerary';
+import { parseItinerary, type DocType, type Itinerary } from '../model/itinerary';
+import { inferDocType } from '../model/documents';
 import type { AttachmentRecord, TripStore } from '../store/tripStore';
 
 /**
@@ -198,6 +199,109 @@ export class SyncEngine {
       doc,
       driveModifiedTime: written.modifiedTime ?? null,
       driveVersion: written.version ?? null,
+    });
+  }
+
+  /**
+   * Uploads a file and attaches it to an item — or to the trip itself when
+   * `itemId` is null, which is where passports and insurance belong.
+   *
+   * The document kind is inferred from the item's type unless one is chosen,
+   * so the Documents lens groups correctly without anything being tagged by
+   * hand.
+   */
+  async attachDocument(
+    folderId: string,
+    itemId: string | null,
+    file: File,
+    options: { docType?: DocType; label?: string } = {},
+  ): Promise<void> {
+    const record = await this.store.getItinerary(folderId);
+    if (!record) throw new Error(`Trip ${folderId} is not loaded`);
+
+    const item = itemId === null ? null : record.doc.items.find((i) => i.id === itemId);
+    if (itemId !== null && !item) {
+      throw new Error(`No item "${itemId}" in this trip`);
+    }
+
+    const uploaded = await this.drive.uploadFile({
+      folderId,
+      name: file.name,
+      mimeType: file.type || 'application/octet-stream',
+      content: file,
+      // Redundant with itinerary.json on purpose: if that file is ever lost,
+      // the trip can be rebuilt from the folder's contents alone.
+      appProperties: itemId === null ? { tripLevel: 'true' } : { itemId },
+    });
+
+    const attachment = {
+      driveFileId: uploaded.id,
+      name: file.name,
+      mimeType: file.type || 'application/octet-stream',
+      docType: options.docType ?? (item ? inferDocType(item.type) : 'other'),
+      ...(options.label ? { label: options.label } : {}),
+      size: file.size,
+    };
+
+    const now = new Date().toISOString();
+    const doc: Itinerary =
+      item === null
+        ? { ...record.doc, attachments: [...record.doc.attachments, attachment], updatedAt: now }
+        : {
+            ...record.doc,
+            updatedAt: now,
+            items: record.doc.items.map((candidate) =>
+              candidate.id === itemId
+                ? {
+                    ...candidate,
+                    attachments: [...candidate.attachments, attachment],
+                    updatedAt: now,
+                  }
+                : candidate,
+            ),
+          };
+
+    await this.push(folderId, doc);
+
+    // The bytes are already in hand, so cache them rather than making the user
+    // download what they just uploaded.
+    await this.store.putAttachment({
+      driveFileId: uploaded.id,
+      folderId,
+      itemId,
+      name: file.name,
+      mimeType: attachment.mimeType,
+      size: file.size,
+      md5Checksum: uploaded.md5Checksum ?? null,
+      bytes: await file.arrayBuffer(),
+      cachedAt: now,
+    });
+  }
+
+  /**
+   * Replaces a trip's itinerary wholesale, as when pasting one in.
+   *
+   * Validates before writing anything, so a malformed paste cannot damage a
+   * trip. The name stays whatever the Drive folder is called: the folder is the
+   * unit of sharing, and letting a paste rename one but not the other would
+   * split them apart.
+   */
+  async replaceItinerary(folderId: string, raw: unknown): Promise<void> {
+    const parsed = parseItinerary(raw);
+
+    // Reconcile first when the trip is not held locally — reached by deep link
+    // or by reloading on the import screen. This is not only self-healing: an
+    // overwrite needs a known Drive revision to compare against, and without a
+    // pull there is no baseline for the compare-and-swap in `push`.
+    if (!(await this.store.getTrip(folderId))) {
+      await this.pull(folderId);
+    }
+    const trip = await this.store.getTrip(folderId);
+
+    await this.push(folderId, {
+      ...parsed,
+      name: trip?.name ?? parsed.name,
+      updatedAt: new Date().toISOString(),
     });
   }
 
