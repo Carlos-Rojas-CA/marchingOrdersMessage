@@ -353,23 +353,54 @@ describe('answering a transition gap', () => {
     stay('Barcelona', '2026-05-13', '2026-05-21', 'Europe/Madrid'),
   ];
 
-  test('offers every way of getting there, not just the two with tickets', async () => {
+  test('offers one way in, since how you travelled is a detail of the answer', async () => {
     await renderAt(`/trip/${FOLDER}/legs`, twoCities);
 
     await screen.findByText(/Rome → Barcelona/);
-    for (const how of ['Flight', 'Train', 'Ferry', 'Bus', 'Car or transfer', 'Other travel']) {
-      expect(screen.getByRole('link', { name: how })).toBeInTheDocument();
-    }
+    // Six links to answer one question is a menu; the form asks which kind.
+    expect(screen.getByRole('link', { name: /Add travel/ })).toBeInTheDocument();
   });
 
-  test('each one opens the form already dated to the day of the move', async () => {
+  test('opens the form already dated to the day of the move', async () => {
     await renderAt(`/trip/${FOLDER}/legs`, twoCities);
 
     await screen.findByText(/Rome → Barcelona/);
-    expect(screen.getByRole('link', { name: 'Ferry' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Add travel/ })).toHaveAttribute(
       'href',
       expect.stringContaining('date=2026-05-13'),
     );
+  });
+
+  test('every kind of travel is still reachable, from inside the form', async () => {
+    await renderAt(`/trip/${FOLDER}/item/new?type=flight`);
+
+    for (const how of ['Flight', 'Train', 'Ferry', 'Bus', 'Car', 'Other']) {
+      expect(await screen.findByRole('button', { name: how })).toBeInTheDocument();
+    }
+  });
+
+  test('switching kind changes what the form asks for', async () => {
+    await renderAt(`/trip/${FOLDER}/item/new?type=flight`);
+    const user = userEvent.setup();
+
+    expect(await screen.findByLabelText('Flight number')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Ferry' }));
+
+    expect(await screen.findByLabelText('Ferry or route')).toBeInTheDocument();
+    expect(screen.getByLabelText('Sails from')).toBeInTheDocument();
+  });
+
+  test('saves as the kind that was chosen', async () => {
+    const { itinerary } = await renderAt(`/trip/${FOLDER}/item/new?type=flight`);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Ferry' }));
+    await user.type(screen.getByLabelText('Ferry or route'), 'Naples → Positano');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(async () => {
+      expect((await itinerary()).items[0].type).toBe('ferry');
+    });
   });
 });
 

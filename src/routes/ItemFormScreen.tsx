@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, FileText } from 'lucide-react';
 import { useAppState, useServices } from '../hooks/useServices';
 import { useLoadedTrip } from '../hooks/useLoadedTrip';
-import { ITEM_TYPES, type ItemType } from '../lib/model/itinerary';
+import type { ItemType } from '../lib/model/itinerary';
 import { legsFromStays } from '../lib/model/route';
 import { resolveTimeZone, timestampFrom, type Place } from '../lib/model/timezones';
 import { isShortenedMapsUrl, parseMapsUrl } from '../lib/model/maps';
@@ -22,8 +22,8 @@ const TYPE_LABELS: Record<ItemType, string> = {
   train: 'Train',
   ferry: 'Ferry',
   bus: 'Bus',
-  car: 'Car or transfer',
-  transit: 'Other travel',
+  car: 'Car',
+  transit: 'Other',
   lodging: 'Stay',
   activity: 'Activity',
   poi: 'Place',
@@ -111,7 +111,15 @@ export function ItemFormScreen() {
   const { app, sync } = useServices();
   const state = useAppState();
 
-  const type = (params.get('type') ?? 'activity') as ItemType;
+  const urlType = (params.get('type') ?? 'activity') as ItemType;
+  /**
+   * The kind of journey is chosen here rather than in the add sheet.
+   *
+   * Six ways of getting somewhere are one question, not six, so the sheet asks
+   * once and the answer is refined where the rest of the details already are.
+   */
+  const [kind, setKind] = useState<ItemType>(urlType);
+  const type = kind;
   const isJourney = JOURNEYS.includes(type);
   const isStay = type === 'lodging';
   /** Part of first-run setup, where a rough flight is worth more than none. */
@@ -356,6 +364,34 @@ export function ItemFormScreen() {
             confirmation once you have booked.
           </p>
         ) : null}
+        {isJourney && !itemId ? (
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-muted">How are you getting there?</span>
+            <div className="flex flex-wrap gap-1.5">
+              {JOURNEYS.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setKind(option)}
+                  aria-pressed={option === kind}
+                  className={
+                    option === kind
+                      ? 'inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-accent px-3 text-sm font-medium text-accent-contrast'
+                      : 'inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-surface-2 px-3 text-sm text-text hover:bg-border'
+                  }
+                >
+                  <ItemIcon
+                    type={option}
+                    className="size-4"
+                    tinted={option !== kind}
+                  />
+                  {TYPE_LABELS[option]}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
         <TextField
           label={isStay ? 'Hotel or rental name' : (words?.name ?? 'What is it?')}
           value={title}
@@ -529,6 +565,4 @@ export function ItemFormScreen() {
   );
 }
 
-/** Offered when choosing what to add. */
-export const ADDABLE_TYPES = ITEM_TYPES.filter((t) => t !== 'document');
 export { TYPE_LABELS };

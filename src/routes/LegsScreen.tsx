@@ -1,12 +1,11 @@
 import { useMemo } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Bed, ChevronLeft, TriangleAlert } from 'lucide-react';
+import { Bed, ChevronLeft, Plus, TriangleAlert } from 'lucide-react';
 import { useAppState } from '../hooks/useServices';
 import { useLoadedTrip } from '../hooks/useLoadedTrip';
 import { bedGaps, legsFromStays, transitionGaps } from '../lib/model/route';
 import { formatDayLabel } from '../lib/model/format';
-import { Button, Card, EmptyState, ItemIcon } from '../components/ui';
-import { JOURNEYS, TYPE_LABELS } from './ItemFormScreen';
+import { Button, Card, EmptyState } from '../components/ui';
 
 /**
  * The trip as a sequence of places, with what has not been arranged.
@@ -82,21 +81,16 @@ export function LegsScreen() {
                       on {formatDayLabel(move.date)} — nothing booked to get you there.
                     </span>
                   </p>
-                  {/* Every way of moving, because the warning exists to be
-                      answered — and one that only accepts a ticket cannot be
-                      answered by someone who drove. */}
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {JOURNEYS.map((how) => (
-                      <Link
-                        key={how}
-                        to={`/trip/${folderId}/item/new?type=${how}&date=${move.date}`}
-                        className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-surface px-3 text-sm"
-                      >
-                        <ItemIcon type={how} className="size-3.5 text-muted" />
-                        {TYPE_LABELS[how]}
-                      </Link>
-                    ))}
-                  </div>
+                  {/* One link, not six. How you travelled is a detail of the
+                      answer rather than six separate answers, and the form
+                      offers every kind once you are in it. */}
+                  <Link
+                    to={`/trip/${folderId}/item/new?type=flight&date=${move.date}`}
+                    className="mt-2 inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-surface px-3 text-sm font-medium"
+                  >
+                    <Plus className="size-3.5" aria-hidden />
+                    Add travel
+                  </Link>
                 </div>
               ) : null}
             </div>

@@ -1,16 +1,27 @@
 import { Link } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { ItemIcon } from './ui';
-import { ADDABLE_TYPES, TYPE_LABELS } from '../routes/ItemFormScreen';
+import type { ItemType } from '../lib/model/itinerary';
 import { formatDayLabel } from '../lib/model/format';
 
 /**
- * Chooses what to add, scoped to a day.
+ * Four choices, scoped to a day.
  *
- * The date is answered here rather than inside the form — it is already known
- * from the day that was tapped, and asking again is a question with a known
- * answer.
+ * Flight, train, ferry, bus, car and other travel are all the same question —
+ * "how am I getting somewhere" — so they are one button here and a switch
+ * inside the form. Ten options to pick from is a menu; four is a decision.
+ *
+ * The date is answered here rather than inside the form: it is already known
+ * from the day that was tapped, and asking again is a question with an answer
+ * already in hand.
  */
+const CHOICES: { type: ItemType; label: string }[] = [
+  // Travel opens on a flight, the most common by far, with the rest a tap away.
+  { type: 'flight', label: 'Travel' },
+  { type: 'lodging', label: 'Stay' },
+  { type: 'activity', label: 'Activity' },
+  { type: 'poi', label: 'Place' },
+];
 export function AddSheet({
   folderId,
   date,
@@ -46,15 +57,15 @@ export function AddSheet({
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          {ADDABLE_TYPES.map((type) => (
+          {CHOICES.map(({ type, label }) => (
             <Link
-              key={type}
+              key={label}
               to={`/trip/${folderId}/item/new?type=${type}${date ? `&date=${date}` : ''}`}
               onClick={onClose}
-              className="flex min-h-12 items-center gap-2 rounded-xl border border-border px-3 hover:bg-surface-2"
+              className="flex min-h-14 items-center gap-2.5 rounded-xl border border-border px-3 font-medium hover:bg-surface-2"
             >
-              <ItemIcon type={type} className="text-muted" />
-              {TYPE_LABELS[type]}
+              <ItemIcon type={type} />
+              {label}
             </Link>
           ))}
         </div>
