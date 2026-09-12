@@ -168,3 +168,25 @@ describe('GoogleDriveClient.createFolder', () => {
     expect((await client.createFolder('Japan 2026')).id).toBe('folder-9');
   });
 });
+
+describe('GoogleDriveClient.getCurrentUser', () => {
+  test('asks Drive who the current token belongs to', async () => {
+    const { client, calls } = clientWith([
+      json({ user: { emailAddress: 'carlos@example.com', displayName: 'Carlos' } }),
+    ]);
+
+    await client.getCurrentUser();
+
+    const url = new URL(calls[0]!.url);
+    expect(url.pathname).toContain('/about');
+    expect(url.searchParams.get('fields')).toContain('user');
+  });
+
+  test('returns the signed-in address, which is what local data is keyed to', async () => {
+    const { client } = clientWith([
+      json({ user: { emailAddress: 'carlos@example.com', displayName: 'Carlos' } }),
+    ]);
+
+    expect((await client.getCurrentUser()).email).toBe('carlos@example.com');
+  });
+});

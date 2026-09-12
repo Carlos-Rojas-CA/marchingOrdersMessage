@@ -14,6 +14,8 @@ export interface AppState {
   syncing: boolean;
   syncError: string | null;
   online: boolean;
+  /** The Google account this device's data belongs to, once known. */
+  account: string | null;
 }
 
 type Listener = () => void;
@@ -33,6 +35,7 @@ export class AppStore {
     syncing: false,
     syncError: null,
     online: true,
+    account: null,
   };
   #listeners = new Set<Listener>();
 
@@ -74,6 +77,48 @@ export class AppStore {
 
   async loadTrips(): Promise<void> {
     this.#update({ trips: await this.store.listTrips() });
+  }
+
+  /** The account recorded locally, without asking Drive. */
+  async loadAccount(): Promise<void> {
+    this.#update({ account: (await this.store.getAccount()) ?? null });
+  }
+
+  /**
+   * Checks who is signed in and clears local data if it is someone new.
+   *
+   * Trips belong to one Google account's Drive; another account cannot read
+   * them. Keeping them across a switch would show a list of trips that
+   * mysteriously refuse to open.
+   *
+   * A failed identity check is deliberately *not* treated as a changed
+   * account. Being offline is not evidence of a different user, and deleting
+   * someone's downloaded documents because the network blipped would be
+   * unforgivable.
+   */
+  async reconcileAccount(): Promise<void> {
+    let email: string;
+    try {
+      email = (await this.sync.currentUser()).email;
+    } catch {
+      return;
+    }
+    if (!email) return;
+
+    const previous = await this.store.getAccount();
+    if (previous !== undefined && previous !== email) {
+      await this.store.clearAll();
+      this.#update({ current: null });
+    }
+
+    await this.store.setAccount(email);
+    this.#update({ account: email, trips: await this.store.listTrips() });
+  }
+
+  /** Forgets everything held for the current account. */
+  async signOut(): Promise<void> {
+    await this.store.clearAll();
+    this.#update({ account: null, current: null, trips: [], syncError: null });
   }
 
   /** Loads a trip from local storage. Touches no network. */

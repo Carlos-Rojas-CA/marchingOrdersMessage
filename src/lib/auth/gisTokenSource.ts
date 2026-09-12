@@ -72,7 +72,7 @@ export function createGisTokenSource(clientId: string): TokenSource {
   let client: GisTokenClient | null = null;
 
   return {
-    async request({ silent }): Promise<TokenGrant> {
+    async request({ silent, chooseAccount }): Promise<TokenGrant> {
       await loadGis();
       const google = window.google;
       if (!google) throw new Error('Google sign-in is unavailable.');
@@ -103,7 +103,12 @@ export function createGisTokenSource(clientId: string): TokenSource {
         // An empty prompt asks Google to reuse the existing session without
         // showing anything; it fails if there is no session, and GoogleAuth
         // then retries interactively.
-        active.requestAccessToken({ prompt: silent ? '' : 'consent' });
+        //
+        // `select_account` is what actually offers a different Google account.
+        // Asking for `consent` instead would re-approve the same one and make
+        // the switch button look broken.
+        const prompt = chooseAccount ? 'select_account' : silent ? '' : 'consent';
+        active.requestAccessToken({ prompt });
       });
     },
   };

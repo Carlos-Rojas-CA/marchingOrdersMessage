@@ -17,7 +17,7 @@ export interface TokenGrant {
  * fake so none of the logic below needs a network or a Google account.
  */
 export interface TokenSource {
-  request(options: { silent: boolean }): Promise<TokenGrant>;
+  request(options: { silent: boolean; chooseAccount?: boolean }): Promise<TokenGrant>;
 }
 
 /**
@@ -31,6 +31,8 @@ const RENEW_MARGIN_MS = 60_000;
 export class GoogleAuth {
   #token: { value: string; expiresAt: number } | null = null;
   #inFlight: Promise<string> | null = null;
+  /** Set by `switchAccount`, cleared as soon as a chooser has been shown. */
+  #chooseAccount = false;
 
   constructor(
     private readonly source: TokenSource,
@@ -43,6 +45,17 @@ export class GoogleAuth {
 
   signOut(): void {
     this.#token = null;
+  }
+
+  /**
+   * Drops the token and forces Google's account chooser on the next call.
+   *
+   * Without the chooser, a silent request would hand back the very account the
+   * user is trying to move away from, and the button would look broken.
+   */
+  switchAccount(): void {
+    this.#token = null;
+    this.#chooseAccount = true;
   }
 
   async getAccessToken(): Promise<string> {
@@ -59,12 +72,22 @@ export class GoogleAuth {
 
   async #acquire(): Promise<string> {
     let grant: TokenGrant;
-    try {
-      // Silent first: a signed-in user should never see a dialog just because
-      // an hour elapsed while the app sat in the background.
-      grant = await this.source.request({ silent: true });
-    } catch {
-      grant = await this.source.request({ silent: false });
+    if (this.#chooseAccount) {
+      try {
+        grant = await this.source.request({ silent: false, chooseAccount: true });
+      } finally {
+        // One chooser, then back to silent renewal — otherwise every hourly
+        // refresh would interrupt with a picker.
+        this.#chooseAccount = false;
+      }
+    } else {
+      try {
+        // Silent first: a signed-in user should never see a dialog just because
+        // an hour elapsed while the app sat in the background.
+        grant = await this.source.request({ silent: true });
+      } catch {
+        grant = await this.source.request({ silent: false });
+      }
     }
 
     this.#token = {

@@ -111,3 +111,42 @@ describe('GoogleAuth', () => {
     expect(auth.hasValidToken()).toBe(true);
   });
 });
+
+describe('switching accounts', () => {
+  test('drops the current token so the next call re-authorises', async () => {
+    const source = sourceReturning(anHour, { accessToken: 'token-2', expiresInSeconds: 3600 });
+    const auth = new GoogleAuth(source);
+    await auth.getAccessToken();
+
+    auth.switchAccount();
+
+    expect(auth.hasValidToken()).toBe(false);
+    expect(await auth.getAccessToken()).toBe('token-2');
+  });
+
+  test('shows the account chooser instead of silently reusing the session', async () => {
+    const request = vi.fn().mockResolvedValue(anHour);
+    const auth = new GoogleAuth({ request });
+    await auth.getAccessToken();
+
+    auth.switchAccount();
+    await auth.getAccessToken();
+
+    // A silent request would hand back the same account the user is trying to
+    // move away from, making the button look broken.
+    expect(request).toHaveBeenLastCalledWith({ silent: false, chooseAccount: true });
+  });
+
+  test('goes back to silent renewal once an account has been chosen', async () => {
+    let now = 0;
+    const request = vi.fn().mockResolvedValue(anHour);
+    const auth = new GoogleAuth({ request }, () => now);
+
+    auth.switchAccount();
+    await auth.getAccessToken();
+    now = 3_600_000 + 1;
+    await auth.getAccessToken();
+
+    expect(request).toHaveBeenLastCalledWith({ silent: true });
+  });
+});

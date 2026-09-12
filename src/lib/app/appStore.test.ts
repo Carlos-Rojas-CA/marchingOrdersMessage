@@ -151,3 +151,74 @@ describe('loadTrips', () => {
     expect(app.getSnapshot().trips.map((t) => t.name)).toEqual(['Japan 2026']);
   });
 });
+
+describe('account changes', () => {
+  async function tripInStore() {
+    drive.seedJson('folder-1', ITINERARY_FILENAME, ITINERARY);
+    await app.refresh('folder-1');
+  }
+
+  test('records the account the local data belongs to', async () => {
+    await app.reconcileAccount();
+
+    expect(app.getSnapshot().account).toBe('tester@example.com');
+  });
+
+  test('keeps local trips when the same account signs in again', async () => {
+    await tripInStore();
+    await app.reconcileAccount();
+
+    await app.reconcileAccount();
+
+    expect((await store.listTrips())).toHaveLength(1);
+  });
+
+  test('wipes local trips when a different account signs in', async () => {
+    await tripInStore();
+    await app.reconcileAccount();
+
+    drive.currentUser = { email: 'someone-else@example.com' };
+    await app.reconcileAccount();
+
+    // The new account cannot read the old account's Drive, so keeping these
+    // would show a list of trips that mysteriously refuse to open.
+    expect(await store.listTrips()).toEqual([]);
+    expect(app.getSnapshot().trips).toEqual([]);
+  });
+
+  test('records the new account after a switch', async () => {
+    await tripInStore();
+    await app.reconcileAccount();
+
+    drive.currentUser = { email: 'someone-else@example.com' };
+    await app.reconcileAccount();
+
+    expect(app.getSnapshot().account).toBe('someone-else@example.com');
+  });
+
+  test('does not wipe anything when the account cannot be determined', async () => {
+    await tripInStore();
+    await app.reconcileAccount();
+    vi.spyOn(drive, 'getCurrentUser').mockRejectedValue(new Error('offline'));
+
+    await app.reconcileAccount();
+
+    // A failed identity check is not evidence of a different user. Deleting
+    // downloaded documents because the network blipped would be unforgivable.
+    expect(await store.listTrips()).toHaveLength(1);
+  });
+});
+
+describe('signOut', () => {
+  test('clears local data and the recorded account', async () => {
+    drive.seedJson('folder-1', ITINERARY_FILENAME, ITINERARY);
+    await app.refresh('folder-1');
+    await app.reconcileAccount();
+
+    await app.signOut();
+
+    expect(await store.listTrips()).toEqual([]);
+    expect(app.getSnapshot().account).toBeNull();
+    expect(app.getSnapshot().current).toBeNull();
+  });
+});

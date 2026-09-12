@@ -222,3 +222,73 @@ describe('persistence', () => {
     reopened.close();
   });
 });
+
+describe('account identity', () => {
+  test('has no account recorded before anyone signs in', async () => {
+    expect(await store.getAccount()).toBeUndefined();
+  });
+
+  test('remembers which account the local data belongs to', async () => {
+    await store.setAccount('carlos@example.com');
+
+    expect(await store.getAccount()).toBe('carlos@example.com');
+  });
+
+  test('survives a reopen, so a reload does not lose track of the owner', async () => {
+    await store.setAccount('carlos@example.com');
+    store.close();
+
+    const reopened = await TripStore.open(dbName);
+    expect(await reopened.getAccount()).toBe('carlos@example.com');
+    reopened.close();
+  });
+});
+
+describe('clearAll', () => {
+  test('removes every trip, itinerary, attachment and queued write', async () => {
+    await store.putTrip({
+      folderId: 'folder-1',
+      name: 'Japan 2026',
+      itineraryFileId: 'file-1',
+      lastSyncedAt: null,
+      canEdit: true,
+      offlineEnabled: false,
+    });
+    await store.putItinerary({
+      folderId: 'folder-1',
+      doc: doc(),
+      driveModifiedTime: null,
+      driveVersion: null,
+    });
+    await store.putAttachment({
+      driveFileId: 'f1',
+      folderId: 'folder-1',
+      itemId: null,
+      name: 'a.pdf',
+      mimeType: 'application/pdf',
+      size: 1,
+      md5Checksum: null,
+      bytes: null,
+      cachedAt: null,
+    });
+    await store.enqueue({ folderId: 'folder-1', kind: 'itinerary', payload: {} });
+
+    await store.clearAll();
+
+    // Signing in as someone else must not leave the previous account's trips
+    // on the device — they are unreadable to the new account and would only
+    // appear as trips that mysteriously fail to open.
+    expect(await store.listTrips()).toEqual([]);
+    expect(await store.getItinerary('folder-1')).toBeUndefined();
+    expect(await store.listAttachments('folder-1')).toEqual([]);
+    expect(await store.pending()).toEqual([]);
+  });
+
+  test('forgets the account it was holding data for', async () => {
+    await store.setAccount('carlos@example.com');
+
+    await store.clearAll();
+
+    expect(await store.getAccount()).toBeUndefined();
+  });
+});

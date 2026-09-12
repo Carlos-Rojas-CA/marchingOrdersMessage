@@ -3,6 +3,7 @@ import {
   FILE_FIELDS,
   type DriveClient,
   type DriveFile,
+  type DriveUser,
   type UploadRequest,
 } from './types';
 
@@ -90,6 +91,19 @@ export class GoogleDriveClient implements DriveClient {
     } while (pageToken);
 
     return files;
+  }
+
+  async getCurrentUser(): Promise<DriveUser> {
+    const url = new URL(`${API}/about`);
+    url.searchParams.set('fields', 'user(emailAddress,displayName)');
+    const response = await this.#request(url.toString());
+    const body = (await response.json()) as {
+      user?: { emailAddress?: string; displayName?: string };
+    };
+    return {
+      email: body.user?.emailAddress ?? '',
+      displayName: body.user?.displayName,
+    };
   }
 
   async createFolder(name: string): Promise<DriveFile> {

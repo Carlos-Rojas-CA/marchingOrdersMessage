@@ -71,6 +71,8 @@ export interface OutboxEntry {
 }
 
 interface Schema extends DBSchema {
+  /** Small key/value corner: which Google account this data belongs to. */
+  meta: { key: string; value: { key: string; value: string } };
   trips: { key: string; value: TripRecord };
   itineraries: { key: string; value: ItineraryRecord };
   attachments: {
@@ -89,24 +91,64 @@ export class TripStore {
   private constructor(private readonly db: IDBPDatabase<Schema>) {}
 
   static async open(name = 'marching-orders'): Promise<TripStore> {
-    const db = await openDB<Schema>(name, 1, {
-      upgrade(database) {
-        database.createObjectStore('trips', { keyPath: 'folderId' });
-        database.createObjectStore('itineraries', { keyPath: 'folderId' });
+    const db = await openDB<Schema>(name, 2, {
+      // Versioned rather than recreated: a schema change must never be a
+      // reason for someone's downloaded documents to disappear.
+      upgrade(database, oldVersion) {
+        if (oldVersion < 1) {
+          database.createObjectStore('trips', { keyPath: 'folderId' });
+          database.createObjectStore('itineraries', { keyPath: 'folderId' });
 
-        const attachments = database.createObjectStore('attachments', {
-          keyPath: 'driveFileId',
-        });
-        attachments.createIndex('byFolder', 'folderId');
+          const attachments = database.createObjectStore('attachments', {
+            keyPath: 'driveFileId',
+          });
+          attachments.createIndex('byFolder', 'folderId');
 
-        const outbox = database.createObjectStore('outbox', {
-          keyPath: 'id',
-          autoIncrement: true,
-        });
-        outbox.createIndex('byFolder', 'folderId');
+          const outbox = database.createObjectStore('outbox', {
+            keyPath: 'id',
+            autoIncrement: true,
+          });
+          outbox.createIndex('byFolder', 'folderId');
+        }
+        if (oldVersion < 2) {
+          database.createObjectStore('meta', { keyPath: 'key' });
+        }
       },
     });
     return new TripStore(db);
+  }
+
+  // — account identity —
+
+  /** The Google account whose Drive this local data mirrors. */
+  async getAccount(): Promise<string | undefined> {
+    return (await this.db.get('meta', 'account'))?.value;
+  }
+
+  async setAccount(email: string): Promise<void> {
+    await this.db.put('meta', { key: 'account', value: email });
+  }
+
+  /**
+   * Wipes everything held locally.
+   *
+   * Used when signing out or switching accounts: trips belonging to one Google
+   * account are unreadable to another, so leaving them would show a list of
+   * trips that mysteriously refuse to open.
+   */
+  async clearAll(): Promise<void> {
+    const tx = this.db.transaction(
+      ['trips', 'itineraries', 'attachments', 'outbox', 'meta'],
+      'readwrite',
+    );
+    await Promise.all([
+      tx.objectStore('trips').clear(),
+      tx.objectStore('itineraries').clear(),
+      tx.objectStore('attachments').clear(),
+      tx.objectStore('outbox').clear(),
+      tx.objectStore('meta').clear(),
+      tx.done,
+    ]);
   }
 
   close(): void {

@@ -5,11 +5,12 @@ import { useAppState, useServices } from '../hooks/useServices';
 import { isConfigured } from '../config';
 import { Button, Card, EmptyState } from '../components/ui';
 import { InstallBanner } from '../components/InstallBanner';
+import { AccountBar } from '../components/AccountBar';
 
 /** The trip list, and the only place a new trip is created. */
 export function TripsScreen() {
   const navigate = useNavigate();
-  const { app, sync } = useServices();
+  const { app, sync, auth } = useServices();
   const state = useAppState();
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
@@ -17,13 +18,21 @@ export function TripsScreen() {
 
   useEffect(() => {
     void app.loadTrips();
-  }, [app]);
+    // The account recorded locally renders immediately and costs nothing.
+    void app.loadAccount();
+
+    // Confirming it with Drive is only attempted when a token is already in
+    // hand. Otherwise merely opening the app would trigger a sign-in popup —
+    // which browsers block anyway, since no click asked for it.
+    if (auth.hasValidToken()) void app.reconcileAccount();
+  }, [app, auth]);
 
   async function createTrip() {
     if (!name.trim()) return;
     setError(null);
     try {
       const folderId = await sync.createTrip(name.trim());
+      await app.reconcileAccount();
       await app.loadTrips();
       navigate(`/trip/${folderId}`);
     } catch (cause) {
@@ -44,6 +53,7 @@ export function TripsScreen() {
       </header>
 
       <InstallBanner />
+      <AccountBar />
 
       {!isConfigured() ? (
         <Card className="mb-4 border-warning/40">

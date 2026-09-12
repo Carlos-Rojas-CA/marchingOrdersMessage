@@ -27,7 +27,14 @@ export interface UploadRequest {
   appProperties?: Record<string, string>;
 }
 
+export interface DriveUser {
+  email: string;
+  displayName?: string;
+}
+
 export interface DriveClient {
+  /** Who the current access token belongs to. Local data is keyed to this. */
+  getCurrentUser(): Promise<DriveUser>;
   /** Every non-trashed file directly inside a folder, following pagination. */
   listFolder(folderId: string): Promise<DriveFile[]>;
   /**

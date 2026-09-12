@@ -48,6 +48,11 @@ export class SyncEngine {
     private readonly store: TripStore,
   ) {}
 
+  /** Who the current credentials belong to. */
+  async currentUser() {
+    return await this.drive.getCurrentUser();
+  }
+
   /**
    * Creates a new trip: a Drive folder plus an empty itinerary inside it.
    *

@@ -1,5 +1,5 @@
 import { DriveError } from './errors';
-import type { DriveClient, DriveFile, UploadRequest } from './types';
+import type { DriveClient, DriveFile, DriveUser, UploadRequest } from './types';
 
 interface StoredFile extends DriveFile {
   folderId: string;
@@ -89,6 +89,13 @@ export class FakeDriveClient implements DriveClient {
   /** Test helper: place a document as if it were already in Drive. */
   seedJson(folderId: string, name: string, value: unknown): void {
     this.#putJson(folderId, name, value);
+  }
+
+  /** Test helper: who the fake reports as signed in. */
+  currentUser: DriveUser = { email: 'tester@example.com', displayName: 'Tester' };
+
+  async getCurrentUser(): Promise<DriveUser> {
+    return this.currentUser;
   }
 
   async createFolder(name: string): Promise<DriveFile> {
