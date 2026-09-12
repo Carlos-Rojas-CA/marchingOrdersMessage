@@ -282,3 +282,37 @@ describe('surviving a page reload', () => {
     );
   });
 });
+
+describe('staying signed in', () => {
+  test('a token is reused for its whole life, not re-fetched per page', async () => {
+    const storage = memoryStorage();
+    let now = 0;
+    const source = sourceReturning(anHour, {
+      accessToken: 'token-2',
+      expiresInSeconds: 3600,
+    });
+
+    await new GoogleAuth(source, () => now, storage).signIn();
+
+    // Four reloads over the following half hour.
+    for (const minute of [5, 12, 20, 30]) {
+      now = minute * 60_000;
+      const reloaded = new GoogleAuth(source, () => now, storage);
+      expect(await reloaded.getAccessToken()).toBe('token-1');
+    }
+
+    // Google was asked exactly once, so no window ever opened after the first.
+    expect(source.request).toHaveBeenCalledTimes(1);
+  });
+
+  test('reports itself signed out once the hour is up, rather than failing later', async () => {
+    const storage = memoryStorage();
+    await new GoogleAuth(sourceReturning(anHour), () => 0, storage).signIn();
+
+    const expired = new GoogleAuth(sourceReturning(anHour), () => 3_600_001, storage);
+
+    // The UI uses this to decide whether to offer signing in, so it has to be
+    // answerable without a network call.
+    expect(expired.hasValidToken()).toBe(false);
+  });
+});

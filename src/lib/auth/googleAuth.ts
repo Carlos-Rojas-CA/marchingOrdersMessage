@@ -55,11 +55,23 @@ interface HeldToken {
   expiresAt: number;
 }
 
+/**
+ * Where a token is kept between page loads.
+ *
+ * Local rather than session storage, deliberately. Google issues browsers
+ * short-lived access tokens and no refresh token — obtaining one of those
+ * needs a client secret, which needs a server, which this app does not have.
+ * So the longest anything can carry is the hour Google grants.
+ *
+ * Given that ceiling, the question is only whether that hour survives closing
+ * the tab. For an installed app, launching and relaunching within the hour is
+ * the common case, and session storage would throw away a perfectly good token
+ * every time. The exposure is an hour-long token scoped to files this app
+ * created; the cost of the alternative is a sign-in on every launch.
+ */
 function defaultStorage(): TokenStorage | null {
   try {
-    // Session storage: a token survives a reload — which is the whole point —
-    // without lingering after the tab is closed.
-    return typeof sessionStorage === 'undefined' ? null : sessionStorage;
+    return typeof localStorage === 'undefined' ? null : localStorage;
   } catch {
     return null;
   }

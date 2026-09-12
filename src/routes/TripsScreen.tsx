@@ -7,6 +7,7 @@ import { Button, Card, EmptyState } from '../components/ui';
 import { InstallBanner } from '../components/InstallBanner';
 import { AccountBar } from '../components/AccountBar';
 import { DeleteTrip } from '../components/DeleteTrip';
+import { SyncBanner } from '../components/SyncBanner';
 
 /** The trip list, and the only place a new trip is created. */
 export function TripsScreen() {
@@ -61,6 +62,7 @@ export function TripsScreen() {
 
       <InstallBanner />
       <AccountBar />
+      <SyncBanner />
 
       {!isConfigured() ? (
         <Card className="mb-4 border-warning/40">

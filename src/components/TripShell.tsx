@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react';
 import { useAppState, useServices } from '../hooks/useServices';
 import { cn } from './ui';
 import { AddSheet } from './AddSheet';
+import { SyncBanner } from './SyncBanner';
 
 /**
  * Frame around the three lenses onto a trip.
@@ -125,6 +126,9 @@ export function TripShell() {
       </header>
 
       <main className="flex-1 px-3 pb-24">
+        <div className="pt-3">
+          <SyncBanner folderId={folderId} />
+        </div>
         <Outlet />
       </main>
 
