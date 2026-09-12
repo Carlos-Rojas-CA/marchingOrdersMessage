@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { FileText, MapPin, Phone } from 'lucide-react';
 import type { ItineraryItem } from '../lib/model/itinerary';
-import { formatTimeOfDay } from '../lib/model/format';
+import { formatDayLabel, formatTimeOfDay } from '../lib/model/format';
 import { ItemIcon } from './ui';
 import { AttachDocument } from './AttachDocument';
 
@@ -20,6 +20,8 @@ export function ItemRow({
   folderId: string;
 }) {
   const time = formatTimeOfDay(item.startsAt);
+  // Rendered as a span rather than a moment only when both ends are known.
+  const stay = item.type === 'lodging' && item.startsAt && item.endsAt;
   const mapQuery =
     item.location?.lat !== undefined && item.location.lng !== undefined
       ? `${item.location.lat},${item.location.lng}`
@@ -36,6 +38,22 @@ export function ItemRow({
           <ItemIcon type={item.type} className="mt-0.5 text-muted" />
           <div className="min-w-0 flex-1">
             <p className="font-medium break-words">{item.title}</p>
+
+            {stay ? (
+              // A stay is a span, and the half people forget is the checkout.
+              // Showing only the arrival hides the time they have to be out,
+              // on a day that is rarely the one they arrived.
+              <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-2 text-sm text-muted">
+                <dt>Check in</dt>
+                <dd className="text-text">
+                  {formatDayLabel(item.startsAt!.slice(0, 10))} · {formatTimeOfDay(item.startsAt)}
+                </dd>
+                <dt>Check out</dt>
+                <dd className="text-text">
+                  {formatDayLabel(item.endsAt!.slice(0, 10))} · {formatTimeOfDay(item.endsAt)}
+                </dd>
+              </dl>
+            ) : null}
 
             {item.confirmationNumber ? (
               <p className="mt-0.5 text-sm text-muted">

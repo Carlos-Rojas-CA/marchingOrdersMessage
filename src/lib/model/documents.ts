@@ -39,9 +39,11 @@ export interface DocumentGroup {
  * under stress, and the design must not depend on past-you having been diligent.
  */
 const INFERRED: Record<ItemType, DocType> = {
-  flight: 'boardingPass',
-  lodging: 'confirmation',
-  train: 'ticket',
+  flight: 'travel',
+  train: 'travel',
+  ferry: 'travel',
+  bus: 'travel',
+  lodging: 'lodging',
   activity: 'ticket',
   poi: 'other',
   note: 'other',
@@ -54,10 +56,12 @@ export function inferDocType(itemType: ItemType): DocType {
 
 /** Display order and headings. Fixed, so the list never reshuffles under you. */
 const GROUP_ORDER: { docType: DocType; label: string }[] = [
-  { docType: 'boardingPass', label: 'Boarding passes' },
+  // Named by what is inside rather than by a category word: "Travel" and
+  // "Tickets" would both plausibly hold a rail ticket, and the heading has to
+  // be unambiguous to someone scanning it in a hurry.
+  { docType: 'travel', label: 'Flights, trains & ferries' },
+  { docType: 'lodging', label: 'Hotels & stays' },
   { docType: 'ticket', label: 'Tickets & reservations' },
-  { docType: 'confirmation', label: 'Confirmations' },
-  { docType: 'voucher', label: 'Vouchers' },
   { docType: 'identity', label: 'Travel documents' },
   { docType: 'insurance', label: 'Insurance' },
   { docType: 'other', label: 'Other' },

@@ -3,9 +3,11 @@ import { twMerge } from 'tailwind-merge';
 import type { ReactNode } from 'react';
 import {
   Bed,
+  Bus,
   FileText,
   MapPin,
   Plane,
+  Ship,
   StickyNote,
   Ticket,
   TrainFront,
@@ -96,8 +98,10 @@ export function EmptyState({
 /** Visual shorthand for what kind of thing an itinerary item is. */
 const ITEM_ICONS: Record<ItemType, LucideIcon> = {
   flight: Plane,
-  lodging: Bed,
   train: TrainFront,
+  ferry: Ship,
+  bus: Bus,
+  lodging: Bed,
   activity: Ticket,
   poi: MapPin,
   note: StickyNote,

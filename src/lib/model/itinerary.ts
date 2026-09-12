@@ -15,26 +15,49 @@ import { z } from 'zod';
 
 export const ITEM_TYPES = [
   'flight',
-  'lodging',
   'train',
+  'ferry',
+  'bus',
+  'lodging',
   'activity',
   'poi',
   'note',
   'document',
 ] as const;
 
+/**
+ * How documents are grouped for retrieval.
+ *
+ * Grouped by the question being asked, not by what the operator calls the
+ * paper: at a gate, a barrier or a terminal you want "the thing that gets me
+ * on board", so flights, trains and ferries share one heading. A museum
+ * booking is a different question and stays separate.
+ */
 export const DOC_TYPES = [
-  'boardingPass',
+  'travel',
+  'lodging',
   'ticket',
-  'confirmation',
-  'voucher',
   'identity',
   'insurance',
   'other',
 ] as const;
 
+/**
+ * Kinds written before the regrouping above.
+ *
+ * A trip authored by an earlier build must not scatter its documents into
+ * Other the next time it is opened.
+ */
 export type ItemType = (typeof ITEM_TYPES)[number];
 export type DocType = (typeof DOC_TYPES)[number];
+
+export const LEGACY_DOC_TYPES: Record<string, DocType> = {
+  boardingPass: 'travel',
+  confirmation: 'lodging',
+  voucher: 'ticket',
+};
+
+
 
 const attachmentSchema = z.looseObject({
   driveFileId: z.string().min(1),
@@ -45,7 +68,15 @@ const attachmentSchema = z.looseObject({
    * no docType, so the grouping in `documents.ts` infers one at read time
    * rather than trusting it to be present.
    */
-  docType: z.enum(DOC_TYPES).optional(),
+  docType: z
+    .string()
+    .optional()
+    .transform((value) =>
+      value === undefined
+        ? undefined
+        : ((LEGACY_DOC_TYPES[value] ?? value) as DocType),
+    )
+    .pipe(z.enum(DOC_TYPES).optional()),
   label: z.string().optional(),
   size: z.number().nonnegative().optional(),
   md5Checksum: z.string().optional(),

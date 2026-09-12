@@ -51,8 +51,8 @@ describe('DocumentsScreen', () => {
 
     // The whole point of this lens: reach a boarding pass without knowing
     // which day it belongs to.
-    expect(await screen.findByText('Boarding passes (1)')).toBeInTheDocument();
-    expect(screen.getByText('Confirmations (1)')).toBeInTheDocument();
+    expect(await screen.findByText('Flights, trains & ferries (1)')).toBeInTheDocument();
+    expect(screen.getByText('Hotels & stays (1)')).toBeInTheDocument();
     expect(screen.getByText('Travel documents (1)')).toBeInTheDocument();
   });
 
@@ -61,7 +61,7 @@ describe('DocumentsScreen', () => {
 
     // Neither boarding.pdf nor hotel.pdf carries a docType; the flight and the
     // lodging item are what place them.
-    expect(await screen.findByText('Boarding passes (1)')).toBeInTheDocument();
+    expect(await screen.findByText('Flights, trains & ferries (1)')).toBeInTheDocument();
     expect(screen.getByText('AA123 SFO → NRT')).toBeInTheDocument();
   });
 
@@ -74,7 +74,7 @@ describe('DocumentsScreen', () => {
   test('shows when a document is not yet saved on the device', async () => {
     await renderLens(<DocumentsScreen />, { itinerary: TRIP, documents: DOCUMENTS });
 
-    await screen.findByText('Boarding passes (1)');
+    await screen.findByText('Flights, trains & ferries (1)');
     expect(screen.queryAllByLabelText('Saved on this device')).toHaveLength(0);
   });
 

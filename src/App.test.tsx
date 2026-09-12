@@ -53,7 +53,10 @@ describe('App in demo mode', () => {
     await user.click(await screen.findByText('Japan 2026', {}, { timeout: 5000 }));
     await user.click(await screen.findByRole('link', { name: /documents/i }));
 
-    expect(await screen.findByText('Boarding passes (1)')).toBeInTheDocument();
+    // The flight's boarding pass and the shinkansen ticket now share one
+    // heading, which is the point of the regrouping.
+    expect(await screen.findByText('Flights, trains & ferries (2)')).toBeInTheDocument();
+    expect(screen.getByText('Hotels & stays (1)')).toBeInTheDocument();
     expect(screen.getByText('Travel documents (1)')).toBeInTheDocument();
   });
 

@@ -76,9 +76,21 @@ as JSON. It is validated before anything is written, so a bad paste cannot
 damage a trip that already exists. Attach PDFs afterwards with **Add** on any
 item; passports and insurance attach to the trip itself.
 
+You do not write that JSON by hand. [`docs/conversion-prompt.md`](docs/conversion-prompt.md)
+is a prompt to paste into Claude or ChatGPT along with whatever you already
+keep — a doc, a spreadsheet export, a pile of booking emails — which returns the
+finished itinerary. The app never talks to an AI itself: that would need an API
+key, and unlike the OAuth client id an API key really is a secret and could not
+live in a public repo.
+
 A worked example converted from a real Google Doc lives at
 [`docs/examples/japan-2023.json`](docs/examples/japan-2023.json) — flights,
 hotels with phone numbers, and the full day-by-day.
+
+Documents are grouped for retrieval rather than by paperwork type: flights,
+trains and ferries share one heading, because at a gate or a barrier you are
+looking for "the thing that gets me on board" and not for the noun the operator
+happens to use. Museum bookings stay separate under tickets.
 
 The rule that matters: **write every time as it appears on the ticket, tagged
 with that place's offset** (`-07:00` leaving San Diego, `+02:00` arriving in

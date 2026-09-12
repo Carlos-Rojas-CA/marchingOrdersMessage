@@ -350,7 +350,7 @@ describe('attachDocument', () => {
     await sync.attachDocument(folderId, 'flight', new File(['%PDF'], 'boarding.pdf'));
 
     const item = (await store.getItinerary(folderId))!.doc.items[0]!;
-    expect(item.attachments[0]!.docType).toBe('boardingPass');
+    expect(item.attachments[0]!.docType).toBe('travel');
   });
 
   test('honours an explicitly chosen kind over the inferred one', async () => {

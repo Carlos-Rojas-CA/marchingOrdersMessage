@@ -14,10 +14,20 @@ const file = (id: string, extra: Record<string, unknown> = {}) => ({
 });
 
 describe('inferDocType', () => {
-  test('maps an item type to the kind of document it usually carries', () => {
-    expect(inferDocType('flight')).toBe('boardingPass');
-    expect(inferDocType('lodging')).toBe('confirmation');
-    expect(inferDocType('train')).toBe('ticket');
+  test('files everything that carries you somewhere as travel', () => {
+    // At a gate, a barrier or a terminal you are looking for "the thing that
+    // gets me on board" — not for the specific noun the operator uses.
+    expect(inferDocType('flight')).toBe('travel');
+    expect(inferDocType('train')).toBe('travel');
+    expect(inferDocType('ferry')).toBe('travel');
+    expect(inferDocType('bus')).toBe('travel');
+  });
+
+  test('files a stay separately from the journey to it', () => {
+    expect(inferDocType('lodging')).toBe('lodging');
+  });
+
+  test('files things booked at a destination as tickets', () => {
     expect(inferDocType('activity')).toBe('ticket');
   });
 
@@ -36,8 +46,39 @@ describe('groupDocuments', () => {
     );
 
     expect(groups).toHaveLength(1);
-    expect(groups[0]!.docType).toBe('boardingPass');
-    expect(groups[0]!.entries[0]!.attachment.driveFileId).toBe('bp');
+    expect(groups[0]!.docType).toBe('travel');
+  });
+
+  test('collects flights, trains and ferries under one heading', () => {
+    const groups = groupDocuments(
+      docWith({
+        items: [
+          { id: 'f', type: 'flight', title: 'Flight', attachments: [file('bp')] },
+          { id: 't', type: 'train', title: 'Train', attachments: [file('rail')] },
+          { id: 'y', type: 'ferry', title: 'Ferry', attachments: [file('boat')] },
+        ],
+      }),
+    );
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]!.label).toBe('Flights, trains & ferries');
+    expect(groups[0]!.entries).toHaveLength(3);
+  });
+
+  test('keeps a museum booking apart from the travel documents', () => {
+    const groups = groupDocuments(
+      docWith({
+        items: [
+          { id: 'f', type: 'flight', title: 'Flight', attachments: [file('bp')] },
+          { id: 'm', type: 'activity', title: 'Uffizi', attachments: [file('uffizi')] },
+        ],
+      }),
+    );
+
+    expect(groups.map((g) => g.label)).toEqual([
+      'Flights, trains & ferries',
+      'Tickets & reservations',
+    ]);
   });
 
   test('prefers an explicit docType over what the parent item implies', () => {
@@ -55,6 +96,22 @@ describe('groupDocuments', () => {
     );
 
     expect(groups.map((g) => g.docType)).toEqual(['other']);
+  });
+
+  test('still understands document kinds written by an earlier version', () => {
+    // A trip authored before these were regrouped must not scatter its
+    // documents into Other the next time it is opened.
+    const groups = groupDocuments(
+      docWith({
+        attachments: [
+          file('bp', { docType: 'boardingPass' }),
+          file('hotel', { docType: 'confirmation' }),
+          file('tour', { docType: 'voucher' }),
+        ],
+      }),
+    );
+
+    expect(groups.map((g) => g.docType)).toEqual(['travel', 'lodging', 'ticket']);
   });
 
   test('includes trip-level documents that belong to no item', () => {
@@ -77,7 +134,7 @@ describe('groupDocuments', () => {
       }),
     );
 
-    expect(groups.map((g) => g.docType)).toEqual(['boardingPass', 'confirmation', 'insurance']);
+    expect(groups.map((g) => g.docType)).toEqual(['travel', 'lodging', 'insurance']);
   });
 
   test('omits groups that have no documents', () => {
@@ -85,7 +142,7 @@ describe('groupDocuments', () => {
       docWith({ items: [{ id: 'i1', type: 'flight', title: 'AA123', attachments: [file('bp')] }] }),
     );
 
-    expect(groups.map((g) => g.docType)).toEqual(['boardingPass']);
+    expect(groups.map((g) => g.docType)).toEqual(['travel']);
   });
 
   test('orders documents within a group by when their item happens', () => {
@@ -119,7 +176,7 @@ describe('groupDocuments', () => {
   test('places undated documents after dated ones within a group', () => {
     const groups = groupDocuments(
       docWith({
-        attachments: [file('spare', { docType: 'boardingPass' })],
+        attachments: [file('spare', { docType: 'travel' })],
         items: [
           {
             id: 'i1',
