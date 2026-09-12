@@ -31,6 +31,8 @@ export function RouteScreen() {
   const state = useAppState();
 
   const [stops, setStops] = useState<Stop[]>([]);
+  /** Empty until the trip loads, then seeded from where the flight lands. */
+  const [startOverride, setStartOverride] = useState('');
   const [adding, setAdding] = useState<Place | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,8 +40,10 @@ export function RouteScreen() {
   useLoadedTrip(folderId);
 
   const doc = state.current?.doc;
-  // Where the route begins is where you land, not where you take off.
-  const start = doc ? arrivalDate(doc) : '';
+  // Where the route begins is where you land, not where you take off — but a
+  // flight may not be entered yet, or may be wrong, so it stays editable.
+  const derivedStart = doc ? arrivalDate(doc) : '';
+  const start = startOverride || derivedStart;
   const planned = useMemo(
     () => (start ? planRoute(start, stops) : []),
     [start, stops],
@@ -56,7 +60,9 @@ export function RouteScreen() {
         place: place.name,
         country: place.country,
         timeZone: place.timeZone,
-        nights: 3,
+        // One night, not an assumed three: a guess that is too long quietly
+        // pushes every later stop out of the trip.
+        nights: 1,
       },
     ]);
     setAdding(null);
@@ -126,11 +132,24 @@ export function RouteScreen() {
           Where are you going, and for how long? The dates are worked out for you.
         </p>
 
-        {start && doc?.startDate && start !== doc.startDate ? (
-          <p className="text-sm text-ok">
-            Starting from {formatDayLabel(start)}, the day your flight lands.
-          </p>
-        ) : null}
+        <div className="flex flex-col gap-1">
+          <label htmlFor="route-start" className="text-xs text-muted">
+            First night
+          </label>
+          <input
+            id="route-start"
+            type="date"
+            value={start}
+            onChange={(event) => setStartOverride(event.target.value)}
+            className="min-h-11 rounded-xl border border-border bg-bg px-3 outline-none focus:border-accent"
+          />
+          {!startOverride && derivedStart && doc?.startDate &&
+          derivedStart !== doc.startDate ? (
+            <p className="text-xs text-ok">
+              The day your flight lands. Change it if that is not right.
+            </p>
+          ) : null}
+        </div>
 
         {!start ? (
           <Card className="border-warning/40">

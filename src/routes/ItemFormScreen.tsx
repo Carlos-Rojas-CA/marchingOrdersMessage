@@ -77,6 +77,25 @@ export function ItemFormScreen() {
   const [startTime, setStartTime] = useState('');
   const [endDate, setEndDate] = useState('');
   const [endTime, setEndTime] = useState('');
+
+  /**
+   * Picking a date fills a midday time if none has been typed.
+   *
+   * The day is what lays out a trip; the exact minute often is not known yet.
+   * Requiring both meant a date entered alone was discarded, which is the
+   * opposite of letting someone sketch a flight before booking it. Filling the
+   * visible field rather than defaulting at save time keeps it honest — the
+   * time is there to be corrected, not invented behind your back.
+   */
+  function pickStartDate(value: string) {
+    setStartDate(value);
+    if (value && !startTime) setStartTime(isStay ? '15:00' : '12:00');
+  }
+
+  function pickEndDate(value: string) {
+    setEndDate(value);
+    if (value && !endTime) setEndTime(isStay ? '11:00' : '12:00');
+  }
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -249,7 +268,7 @@ export function ItemFormScreen() {
               date={startDate}
               time={startTime}
               timeZone={startZone}
-              onDateChange={setStartDate}
+              onDateChange={pickStartDate}
               onTimeChange={setStartTime}
             />
             <PlaceField
@@ -264,7 +283,7 @@ export function ItemFormScreen() {
               date={endDate}
               time={endTime}
               timeZone={endZone}
-              onDateChange={setEndDate}
+              onDateChange={pickEndDate}
               onTimeChange={setEndTime}
             />
           </>
@@ -282,7 +301,7 @@ export function ItemFormScreen() {
               date={startDate}
               time={startTime}
               timeZone={startZone}
-              onDateChange={setStartDate}
+              onDateChange={pickStartDate}
               onTimeChange={setStartTime}
             />
             <DateTimeField
@@ -290,7 +309,7 @@ export function ItemFormScreen() {
               date={endDate}
               time={endTime}
               timeZone={endZone}
-              onDateChange={setEndDate}
+              onDateChange={pickEndDate}
               onTimeChange={setEndTime}
             />
           </>
