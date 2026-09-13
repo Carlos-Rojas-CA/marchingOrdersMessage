@@ -98,10 +98,28 @@ export class FakeDriveClient implements DriveClient {
     return this.currentUser;
   }
 
-  async createFolder(name: string): Promise<DriveFile> {
+  async createFolder(name: string, parentId?: string): Promise<DriveFile> {
     // Modelled as a zero-byte file in a synthetic root so that listing it as a
     // parent behaves the same way a real Drive folder does.
-    return this.#put('__root__', name, 'application/vnd.google-apps.folder', new Blob([]), '');
+    return this.#put(
+      parentId ?? '__root__',
+      name,
+      'application/vnd.google-apps.folder',
+      new Blob([]),
+      '',
+    );
+  }
+
+  async listFilesNamed(name: string): Promise<DriveFile[]> {
+    return [...this.#files.values()]
+      .filter((f) => f.name === name)
+      .map((f) => ({ ...this.#meta(f), parents: [f.folderId] }));
+  }
+
+  async listFolders(): Promise<DriveFile[]> {
+    return [...this.#files.values()]
+      .filter((f) => f.mimeType === 'application/vnd.google-apps.folder')
+      .map((f) => ({ ...this.#meta(f), parents: [f.folderId] }));
   }
 
   async trashFolder(folderId: string): Promise<void> {

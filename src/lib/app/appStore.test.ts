@@ -281,3 +281,43 @@ describe('losing a token is not signing out', () => {
     expect((await store.listTrips())).toHaveLength(1);
   });
 });
+
+describe('recovering trips from Drive', () => {
+  test('brings back a trip the device has never seen', async () => {
+    const folderId = await new SyncEngine(drive, store).createTrip('Japan 2026');
+    await store.clearAll();
+
+    await app.recoverTrips();
+
+    // Signing out clears the local list, and a second device never had one.
+    // A trip that plainly exists in Drive must not be invisible to the app
+    // that made it.
+    expect(app.getSnapshot().trips.map((t) => t.folderId)).toEqual([folderId]);
+  });
+
+  test('leaves trips already held alone', async () => {
+    await new SyncEngine(drive, store).createTrip('Japan 2026');
+
+    await app.recoverTrips();
+
+    // Asserted against the store rather than the snapshot: recovery only
+    // touches the rendered list when it actually found something, which is
+    // the behaviour being checked.
+    expect(await store.listTrips()).toHaveLength(1);
+  });
+
+  test('reports how many it found, so silence can be told from success', async () => {
+    await new SyncEngine(drive, store).createTrip('Japan 2026');
+    await store.clearAll();
+
+    expect(await app.recoverTrips()).toBe(1);
+    // Nothing new the second time.
+    expect(await app.recoverTrips()).toBe(0);
+  });
+
+  test('does not fail the screen when Drive cannot be reached', async () => {
+    vi.spyOn(drive, 'listFilesNamed').mockRejectedValue(new Error('offline'));
+
+    await expect(app.recoverTrips()).resolves.toBe(0);
+  });
+});

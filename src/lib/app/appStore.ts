@@ -115,6 +115,37 @@ export class AppStore {
     this.#update({ account: email, trips: await this.store.listTrips() });
   }
 
+  /**
+   * Adds any trip Drive knows about that this device does not.
+   *
+   * Returns how many were new, so the UI can tell "found nothing" from
+   * "worked". Failures are swallowed: this runs in the background after
+   * signing in, and a trip list that already works must not break because a
+   * recovery attempt could not reach the network.
+   */
+  async recoverTrips(): Promise<number> {
+    let found: { folderId: string; name: string }[];
+    try {
+      found = await this.sync.discoverTrips();
+    } catch {
+      return 0;
+    }
+
+    let added = 0;
+    for (const trip of found) {
+      if (await this.store.getTrip(trip.folderId)) continue;
+      try {
+        await this.sync.pull(trip.folderId);
+        added++;
+      } catch {
+        // One unreadable trip should not stop the others coming back.
+      }
+    }
+
+    if (added > 0) this.#update({ trips: await this.store.listTrips() });
+    return added;
+  }
+
   /** Removes one trip, optionally trashing its Drive folder too. */
   async deleteTrip(folderId: string, options: { fromDrive: boolean }): Promise<void> {
     try {

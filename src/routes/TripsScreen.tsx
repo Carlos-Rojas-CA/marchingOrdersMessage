@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Check, Luggage, Plus, WifiOff } from 'lucide-react';
+import { Check, FolderOpen, Luggage, Plus, WifiOff } from 'lucide-react';
 import { useAppState, useServices } from '../hooks/useServices';
 import { isConfigured } from '../config';
 import { Button, Card, EmptyState } from '../components/ui';
@@ -20,6 +20,30 @@ export function TripsScreen() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [finding, setFinding] = useState(false);
+  const [foundNote, setFoundNote] = useState<string | null>(null);
+
+  /**
+   * Asks Drive what trips exist, rather than trusting this device's list.
+   *
+   * Offered by hand as well as run after signing in, because the case it
+   * serves — a trip made on another device, or before signing out — is one
+   * where the list looks finished and simply is not.
+   */
+  async function findTrips() {
+    setFinding(true);
+    setFoundNote(null);
+    try {
+      const added = await app.recoverTrips();
+      setFoundNote(
+        added === 0
+          ? 'No other trips in Drive'
+          : `Found ${added} ${added === 1 ? 'trip' : 'trips'}`,
+      );
+    } finally {
+      setFinding(false);
+    }
+  }
 
   useEffect(() => {
     void app.loadTrips();
@@ -29,7 +53,11 @@ export function TripsScreen() {
     // Only confirm with Drive when a token is already held. Google's token
     // client opens a window for any request, so asking here would greet every
     // page load with a consent popup.
-    if (auth.hasValidToken()) void app.reconcileAccount();
+    // Confirm the account and pick up any trip this device has not seen —
+    // both only when a token is already held, so a page load never prompts.
+    if (auth.hasValidToken()) {
+      void app.reconcileAccount().then(() => app.recoverTrips());
+    }
   }, [app, auth]);
 
   async function createTrip() {
@@ -177,7 +205,21 @@ export function TripsScreen() {
         )}
       </div>
 
-      <div className="mt-8 flex justify-center">
+      {state.account ? (
+        <div className="mt-6 flex justify-center">
+          <button
+            type="button"
+            onClick={() => void findTrips()}
+            disabled={finding || !state.online}
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-sm text-muted hover:bg-surface-2 disabled:opacity-50"
+          >
+            <FolderOpen className="size-3.5" aria-hidden />
+            {finding ? 'Looking…' : (foundNote ?? 'Find trips in Drive')}
+          </button>
+        </div>
+      ) : null}
+
+      <div className="mt-6 flex justify-center">
         <CheckForUpdates />
       </div>
     </div>

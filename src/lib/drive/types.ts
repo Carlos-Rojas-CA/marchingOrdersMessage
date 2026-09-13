@@ -17,6 +17,8 @@ export interface DriveFile {
   version?: string;
   appProperties?: Record<string, string>;
   capabilities?: { canEdit?: boolean };
+  /** Folder ids this file sits in. */
+  parents?: string[];
 }
 
 export interface UploadRequest {
@@ -44,7 +46,16 @@ export interface DriveClient {
    * narrow `drive.file` scope without the Picker, which makes "new trip" the
    * one flow that cannot be blocked by how folder-picking grants turn out.
    */
-  createFolder(name: string): Promise<DriveFile>;
+  createFolder(name: string, parentId?: string): Promise<DriveFile>;
+  /**
+   * Files with this name that the app can see.
+   *
+   * Under `drive.file` that is exactly the files it created, which is what
+   * makes finding a trip again possible after local data is gone.
+   */
+  listFilesNamed(name: string): Promise<DriveFile[]>;
+  /** Folders the app can see. */
+  listFolders(): Promise<DriveFile[]>;
   /**
    * Moves a folder to Drive's trash.
    *
@@ -63,4 +74,4 @@ export interface DriveClient {
 
 /** Fields sync depends on. Requesting less makes change detection impossible. */
 export const FILE_FIELDS =
-  'id,name,mimeType,modifiedTime,md5Checksum,size,version,appProperties,capabilities(canEdit)';
+  'id,name,mimeType,modifiedTime,md5Checksum,size,version,appProperties,capabilities(canEdit),parents';

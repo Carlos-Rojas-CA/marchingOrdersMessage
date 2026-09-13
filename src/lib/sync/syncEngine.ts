@@ -20,6 +20,15 @@ import type { AttachmentRecord, TripStore } from '../store/tripStore';
 
 export const ITINERARY_FILENAME = 'itinerary.json';
 
+/**
+ * One folder in Drive holding every trip.
+ *
+ * Tidiness rather than function: trips are found by asking Drive what this app
+ * created, not by looking inside this folder. But loose trip folders scattered
+ * through someone's Drive root is a mess the app has no business making.
+ */
+export const HOME_FOLDER = 'Marching Orders';
+
 /** Someone else wrote the file since we last read it. Never overwrite blindly. */
 export class ConflictError extends Error {
   constructor(readonly folderId: string) {
@@ -91,6 +100,21 @@ export class SyncEngine {
     return await this.drive.getCurrentUser();
   }
 
+  /** The shared parent, found by name or created the first time. */
+  async #homeFolder(): Promise<string | undefined> {
+    try {
+      const existing = (await this.drive.listFolders()).find(
+        (folder) => folder.name === HOME_FOLDER,
+      );
+      if (existing) return existing.id;
+      return (await this.drive.createFolder(HOME_FOLDER)).id;
+    } catch {
+      // Tidiness is not worth failing a trip over; it lands in the root
+      // instead, and is still found by discoverTrips either way.
+      return undefined;
+    }
+  }
+
   /**
    * Creates a new trip: a Drive folder plus an empty itinerary inside it.
    *
@@ -103,7 +127,7 @@ export class SyncEngine {
     name: string,
     dates: { startDate?: string; endDate?: string } = {},
   ): Promise<string> {
-    const folder = await this.drive.createFolder(name);
+    const folder = await this.drive.createFolder(name, await this.#homeFolder());
     const doc = parseItinerary({
       schemaVersion: 1,
       tripId: crypto.randomUUID(),
@@ -153,6 +177,38 @@ export class SyncEngine {
     this.#queues.delete(folderId);
 
     if (failure) throw failure;
+  }
+
+  /**
+   * Every trip this account has, according to Drive rather than to this device.
+   *
+   * The trip list lives in local storage, which signing out clears and a second
+   * device never had — so without this, a trip that plainly exists in Drive is
+   * invisible to the app that made it. Under `drive.file` a query returns the
+   * files this app created, which is exactly the set it should offer back.
+   *
+   * Found by looking for itinerary files and taking their parents, rather than
+   * by looking inside the home folder: a trip moved elsewhere in Drive is still
+   * a trip.
+   */
+  async discoverTrips(): Promise<{ folderId: string; name: string }[]> {
+    const [itineraries, folders] = await Promise.all([
+      this.drive.listFilesNamed(ITINERARY_FILENAME),
+      this.drive.listFolders(),
+    ]);
+
+    const byId = new Map(folders.map((folder) => [folder.id, folder]));
+    const found: { folderId: string; name: string }[] = [];
+
+    for (const file of itineraries) {
+      const folderId = file.parents?.[0];
+      if (!folderId) continue;
+      const folder = byId.get(folderId);
+      if (!folder) continue;
+      found.push({ folderId, name: folder.name });
+    }
+
+    return found;
   }
 
   /**

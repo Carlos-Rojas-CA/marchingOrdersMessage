@@ -106,7 +106,7 @@ export class GoogleDriveClient implements DriveClient {
     };
   }
 
-  async createFolder(name: string): Promise<DriveFile> {
+  async createFolder(name: string, parentId?: string): Promise<DriveFile> {
     const url = new URL(`${API}/files`);
     url.searchParams.set('fields', FILE_FIELDS);
     const response = await this.#request(url.toString(), {
@@ -115,9 +115,44 @@ export class GoogleDriveClient implements DriveClient {
       body: JSON.stringify({
         name,
         mimeType: 'application/vnd.google-apps.folder',
+        ...(parentId ? { parents: [parentId] } : {}),
       }),
     });
     return (await response.json()) as DriveFile;
+  }
+
+  /** Everything matching a query, following pagination. */
+  async #query(q: string): Promise<DriveFile[]> {
+    const files: DriveFile[] = [];
+    let pageToken: string | undefined;
+
+    do {
+      const url = new URL(`${API}/files`);
+      url.searchParams.set('q', q);
+      url.searchParams.set('fields', `files(${FILE_FIELDS}),nextPageToken`);
+      url.searchParams.set('pageSize', '1000');
+      if (pageToken) url.searchParams.set('pageToken', pageToken);
+
+      const response = await this.#request(url.toString());
+      const page = (await response.json()) as {
+        files?: DriveFile[];
+        nextPageToken?: string;
+      };
+      files.push(...(page.files ?? []));
+      pageToken = page.nextPageToken;
+    } while (pageToken);
+
+    return files;
+  }
+
+  async listFilesNamed(name: string): Promise<DriveFile[]> {
+    return await this.#query(`name = '${name}' and trashed = false`);
+  }
+
+  async listFolders(): Promise<DriveFile[]> {
+    return await this.#query(
+      "mimeType = 'application/vnd.google-apps.folder' and trashed = false",
+    );
   }
 
   async trashFolder(folderId: string): Promise<void> {

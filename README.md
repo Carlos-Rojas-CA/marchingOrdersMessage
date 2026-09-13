@@ -10,6 +10,11 @@ phone that works with the radio off.
 Sharing a trip is sharing the Drive folder. There is no account system, no
 server, and no database.
 
+Trips live together in a **Marching Orders** folder in your Drive, but that is
+tidiness rather than function: the app finds them by asking Drive what it
+created, so a trip moved elsewhere is still found, and so is one made on
+another device.
+
 ## The three lenses
 
 One dataset, three ways in:

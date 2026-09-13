@@ -776,3 +776,58 @@ describe('telling a real conflict from Drive bumping its own metadata', () => {
     expect(JSON.parse(await drive.downloadText(fileId)).name).toBe('Their edit');
   });
 });
+
+describe('a home folder', () => {
+  test('puts a new trip inside one rather than loose in Drive', async () => {
+    const folderId = await sync.createTrip('Japan 2026');
+
+    const home = (await drive.listFolders()).find((f) => f.name === 'Marching Orders');
+    expect(home).toBeDefined();
+    const trip = (await drive.listFolders()).find((f) => f.id === folderId)!;
+    expect(trip.parents).toEqual([home!.id]);
+  });
+
+  test('reuses the same home folder for every trip', async () => {
+    await sync.createTrip('Japan 2026');
+    await sync.createTrip('Italy 2027');
+
+    const homes = (await drive.listFolders()).filter((f) => f.name === 'Marching Orders');
+    // A second home folder would scatter the trips it exists to gather.
+    expect(homes).toHaveLength(1);
+  });
+});
+
+describe('finding trips again', () => {
+  test('recovers a trip whose local record is gone', async () => {
+    const folderId = await sync.createTrip('Japan 2026');
+    // Signing out, or opening the app on a different device.
+    await store.clearAll();
+
+    const found = await sync.discoverTrips();
+
+    // drive.file sees the files this app created, which is exactly the set of
+    // trips it should be able to offer back.
+    expect(found.map((t) => t.folderId)).toEqual([folderId]);
+    expect(found[0]!.name).toBe('Japan 2026');
+  });
+
+  test('finds every trip, not just the most recent', async () => {
+    await sync.createTrip('Japan 2026');
+    await sync.createTrip('Italy 2027');
+    await store.clearAll();
+
+    const found = await sync.discoverTrips();
+
+    expect(found.map((t) => t.name).sort()).toEqual(['Italy 2027', 'Japan 2026']);
+  });
+
+  test('ignores a folder with no itinerary in it', async () => {
+    await drive.createFolder('Holiday photos');
+
+    expect(await sync.discoverTrips()).toEqual([]);
+  });
+
+  test('says nothing when the account has no trips at all', async () => {
+    expect(await sync.discoverTrips()).toEqual([]);
+  });
+});
