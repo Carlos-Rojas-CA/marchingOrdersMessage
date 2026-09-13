@@ -140,7 +140,7 @@ export function RouteScreen() {
         </button>
       </header>
 
-      <main className="flex flex-1 flex-col gap-3 p-3">
+      <main className="pad-safe-end pad-safe-x flex flex-1 flex-col gap-3 py-3">
         <p className="text-sm text-muted">
           Where are you going, and for how long? The dates are worked out for you.
         </p>

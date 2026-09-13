@@ -43,7 +43,7 @@ export function LegsScreen() {
         <h1 className="flex-1 truncate font-semibold">Legs</h1>
       </header>
 
-      <main className="flex flex-1 flex-col gap-3 p-3">
+      <main className="pad-safe-end pad-safe-x flex flex-1 flex-col gap-3 py-3">
         {legs.length === 0 ? (
           <EmptyState icon={Bed} title="No stays yet">
             Add where you are sleeping and this becomes the shape of the trip —

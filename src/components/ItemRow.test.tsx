@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TimelineScreen } from '../routes/TimelineScreen';
 import { NowScreen } from '../routes/NowScreen';
@@ -636,5 +636,56 @@ describe('a journey on the timeline', () => {
     // both ends makes the chain obvious at a glance.
     expect(await screen.findByText('Positano → Naples')).toBeInTheDocument();
     expect(screen.getByText('Naples → Florence')).toBeInTheDocument();
+  });
+});
+
+describe('swipe to delete', () => {
+  const TRIP = {
+    schemaVersion: 1,
+    tripId: 't1',
+    name: 'Italy 2026',
+    items: [
+      {
+        id: 'paint',
+        type: 'activity',
+        title: 'Paint class',
+        startsAt: '2026-09-21T13:00:00+02:00',
+        attachments: [],
+      },
+    ],
+  };
+
+  test('offers a delete the gesture alone would hide from a screen reader', async () => {
+    await renderLens(<TimelineScreen />, { itinerary: TRIP });
+
+    // The swipe is invisible to anyone not making it, so the button it
+    // uncovers stays named, focusable and reachable on its own terms.
+    expect(
+      await screen.findByRole('button', { name: 'Delete Paint class' }),
+    ).toBeInTheDocument();
+  });
+
+  test('removes the item when that button is pressed', async () => {
+    const { drive } = await renderLens(<TimelineScreen />, { itinerary: TRIP });
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Delete Paint class' }));
+
+    await waitFor(() => expect(screen.queryByText('Paint class')).not.toBeInTheDocument());
+
+    const file = (await drive.listFolder('folder-1')).find(
+      (f) => f.name === 'itinerary.json',
+    )!;
+    const written = JSON.parse(await drive.downloadText(file.id));
+    // Tombstoned rather than spliced out, so a later merge can tell deleted
+    // from never-existed.
+    expect(written.items[0].deleted).toBe(true);
+  });
+
+  test('is not offered on a trip you can only look at', async () => {
+    await renderLens(<TimelineScreen />, { itinerary: TRIP, readOnly: true });
+
+    await screen.findByText('Paint class');
+    expect(screen.queryByRole('button', { name: /^Delete/ })).not.toBeInTheDocument();
   });
 });

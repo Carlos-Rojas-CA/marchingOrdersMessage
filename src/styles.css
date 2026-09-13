@@ -133,9 +133,19 @@ body {
   font-size: 16px;
   line-height: 1.5;
   margin: 0;
-  /* Stops the rubber-band scroll from detaching the fixed bottom nav on iOS. */
-  overscroll-behavior-y: none;
   -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * No rubber-band past the ends of the page.
+ *
+ * On the web that bounce says "this is a document in a browser"; in an
+ * installed app it just looks like the screen came loose. It has to be set on
+ * the scrolling element, which on iOS is html rather than body — set only on
+ * body, it does nothing, which is why the page still slid past its edges.
+ */
+html {
+  overscroll-behavior-y: none;
 }
 
 /* Timetable type: headings carry the signage face and tighten as they grow. */
@@ -207,12 +217,26 @@ select {
   scroll-margin-bottom: 5.5rem;
 }
 
-/* Respect the notch and the home indicator without hard-coding device sizes. */
+/*
+ * Respect the notch, the home indicator and the rounded corners.
+ *
+ * A phone's screen is not a rectangle. Anything flush to the bottom edge loses
+ * its corners to the radius, which is how a Save button ends up with its ends
+ * clipped off.
+ */
 .pad-safe-top {
   padding-top: env(safe-area-inset-top);
 }
 .pad-safe-bottom {
   padding-bottom: env(safe-area-inset-bottom);
+}
+.pad-safe-x {
+  padding-left: max(0.75rem, env(safe-area-inset-left));
+  padding-right: max(0.75rem, env(safe-area-inset-right));
+}
+/* For a screen that ends in a button rather than in a tab bar. */
+.pad-safe-end {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 1.25rem);
 }
 
 /* Visible focus, since this is operated in a hurry and sometimes by keyboard. */

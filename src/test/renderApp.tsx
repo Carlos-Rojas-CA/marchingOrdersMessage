@@ -58,6 +58,8 @@ async function seedDrive(
 interface Options {
   itinerary: Record<string, unknown>;
   documents?: SeedDocument[];
+  /** Renders the trip as a Drive Viewer would see it. */
+  readOnly?: boolean;
 }
 
 /**
@@ -69,9 +71,10 @@ interface Options {
  */
 export async function renderLens(
   element: ReactElement,
-  { itinerary, documents = [] }: Options,
+  { itinerary, documents = [], readOnly = false }: Options,
 ): Promise<RenderResult & { drive: FakeDriveClient }> {
   const drive = await seedDrive(itinerary, documents);
+  if (readOnly) drive.setReadOnly(FOLDER);
 
   const result = render(
     <ServicesProvider

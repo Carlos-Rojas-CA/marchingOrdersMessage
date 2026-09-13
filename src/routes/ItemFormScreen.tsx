@@ -381,7 +381,7 @@ export function ItemFormScreen() {
         ) : null}
       </header>
 
-      <main className="flex flex-1 flex-col gap-4 p-3">
+      <main className="pad-safe-end pad-safe-x flex flex-1 flex-col gap-4 py-3">
         {isOutbound ? (
           <p className="text-sm text-muted">
             Rough is fine — where you are flying to and roughly when you land is

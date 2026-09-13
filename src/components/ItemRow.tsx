@@ -3,7 +3,9 @@ import { ChevronRight, FileText, MapPin, Phone } from 'lucide-react';
 import type { ItineraryItem } from '../lib/model/itinerary';
 import { formatDayLabel, formatTimeOfDay } from '../lib/model/format';
 import { ItemIcon } from './ui';
+import { SwipeToDelete } from './SwipeToDelete';
 import { devicePlatform, mapsLinkFor } from '../lib/model/maps';
+import { useAppState, useServices } from '../hooks/useServices';
 
 /**
  * One itinerary item.
@@ -33,6 +35,13 @@ export function ItemRow({
 }) {
   const tile = variant === 'tile';
   const live = tone === 'live';
+  const { app, sync } = useServices();
+  const canEdit = useAppState().current?.trip.canEdit ?? false;
+
+  async function remove() {
+    await sync.removeItem(folderId, item.id);
+    await app.openTrip(folderId);
+  }
   const time = formatTimeOfDay(item.startsAt);
   // Rendered as a span rather than a moment only when both ends are known.
   const stay = item.type === 'lodging' && item.startsAt && item.endsAt;
@@ -59,7 +68,7 @@ export function ItemRow({
         ? (place.address ?? place.name)
         : place?.address;
 
-  return (
+  const card = (
     <div
       className={
         tile
@@ -190,5 +199,14 @@ export function ItemRow({
         ) : null}
       </div>
     </div>
+  );
+
+  // A viewer has nothing to swipe towards, so the gesture is not offered.
+  if (!canEdit) return card;
+
+  return (
+    <SwipeToDelete label={item.title} onDelete={() => void remove()}>
+      {card}
+    </SwipeToDelete>
   );
 }

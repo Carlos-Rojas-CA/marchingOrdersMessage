@@ -50,7 +50,7 @@ export function TripsScreen() {
   }
 
   return (
-    <div className="mx-auto min-h-full max-w-2xl px-3 pb-10 sm:border-x sm:border-border">
+    <div className="pad-safe-x mx-auto min-h-full max-w-2xl pb-10 sm:border-x sm:border-border">
       <header className="pad-safe-top flex items-center justify-between gap-2 py-5">
         <h1 className="text-3xl font-bold tracking-tight">Trips</h1>
         {!state.online ? (

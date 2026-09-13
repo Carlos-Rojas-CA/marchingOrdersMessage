@@ -86,7 +86,7 @@ export function ImportScreen() {
         <h1 className="flex-1 truncate font-semibold">Paste an itinerary</h1>
       </header>
 
-      <main className="flex flex-1 flex-col gap-3 p-3">
+      <main className="pad-safe-end pad-safe-x flex flex-1 flex-col gap-3 py-3">
         <p className="text-sm text-muted">
           Paste the trip as JSON. It replaces whatever this trip currently holds,
           and is checked before anything is written.
