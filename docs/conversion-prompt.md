@@ -45,8 +45,10 @@ Each item:
     "name": "<place name>",
     "address": "<full street address>",
     "phone": "<phone number in international form>",
+    "city": "<the town or city, which groups the trip into legs>",
     "mapsUrl": "<a Google or Apple Maps link, if the source has one>"
   },
+  "origin": { "name": "<where a journey starts>", "city": "<its town or city>" },
   "attachments": []
 }
 
@@ -74,6 +76,11 @@ RULES
    transfer with nothing to book. "transit" is the catch-all for anything the
    others do not cover. Their documents are grouped together in the app, so
    getting the specific type right only affects the icon.
+
+   GIVE EVERY JOURNEY BOTH ENDS: "origin" for where it starts and "location"
+   for where it arrives. A connection — a ferry to one town and a train onward
+   from it — is two items, each naming its own two ends, so the chain reads
+   in order.
 
    Record these even when there is no ticket. The app compares where you sleep
    from one night to the next, and tells you when you are in a different town

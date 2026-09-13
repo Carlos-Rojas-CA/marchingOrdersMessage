@@ -601,3 +601,40 @@ describe('the Now screen', () => {
     expect(card.className).not.toContain('border-live');
   });
 });
+
+describe('a journey on the timeline', () => {
+  test('reads as both of its ends', async () => {
+    await renderLens(<TimelineScreen />, {
+      itinerary: {
+        schemaVersion: 1,
+        tripId: 't1',
+        name: 'Italy 2026',
+        items: [
+          {
+            id: 'ferry',
+            type: 'ferry',
+            title: 'Ferry',
+            startsAt: '2026-05-20T09:00:00+02:00',
+            origin: { name: 'Positano', city: 'Positano' },
+            location: { name: 'Naples', city: 'Naples' },
+            attachments: [],
+          },
+          {
+            id: 'train',
+            type: 'train',
+            title: 'Frecciarossa 9512',
+            startsAt: '2026-05-20T13:30:00+02:00',
+            origin: { name: 'Naples', city: 'Naples' },
+            location: { name: 'Florence', city: 'Florence' },
+            attachments: [],
+          },
+        ],
+      },
+    });
+
+    // Two lines each naming only a destination hide the connection; naming
+    // both ends makes the chain obvious at a glance.
+    expect(await screen.findByText('Positano → Naples')).toBeInTheDocument();
+    expect(screen.getByText('Naples → Florence')).toBeInTheDocument();
+  });
+});

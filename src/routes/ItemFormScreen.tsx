@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, FileText } from 'lucide-react';
 import { useAppState, useServices } from '../hooks/useServices';
 import { useLoadedTrip } from '../hooks/useLoadedTrip';
-import type { ItemType } from '../lib/model/itinerary';
+import type { ItemType, ItineraryLocation } from '../lib/model/itinerary';
 import { legsFromStays } from '../lib/model/route';
 import { resolveTimeZone, timestampFrom, type Place } from '../lib/model/timezones';
 import { isShortenedMapsUrl, parseMapsUrl } from '../lib/model/maps';
@@ -86,6 +86,25 @@ const LAST_PLACE_KEY = 'marching-orders:last-place';
 
 function rememberPlace(place: Place) {
   localStorage.setItem(LAST_PLACE_KEY, JSON.stringify(place));
+}
+
+/**
+ * Rebuilds the place a saved item was given.
+ *
+ * Reconstructed from what was stored rather than looked up again: a typed name
+ * like Positano is in no list, so searching for it found nothing and the field
+ * came back empty — silently losing a place that had been entered on purpose.
+ * The name and the zone were both written down; that is enough.
+ */
+function placeFrom(location: ItineraryLocation | undefined): Place | null {
+  const name = location?.city ?? location?.name;
+  if (!name) return null;
+
+  return {
+    name,
+    country: '',
+    timeZone: location?.timeZone ?? searchPlaces(name, 1)[0]?.timeZone ?? 'UTC',
+  };
 }
 
 function lastPlace(): Place | null {
@@ -193,10 +212,8 @@ export function ItemFormScreen() {
     setMapsUrl(existing.location?.mapsUrl ?? '');
     setConfirmation(existing.confirmationNumber ?? '');
     setNotes(existing.notes ?? '');
-    if (existing.location?.city) {
-      const [match] = searchPlaces(existing.location.city, 1);
-      if (match) setToPlace(match);
-    }
+    setToPlace(placeFrom(existing.location));
+    setFromPlace(placeFrom(existing.origin));
   }, [existing]);
 
   /**
@@ -263,6 +280,13 @@ export function ItemFormScreen() {
       // Where the item *ends up* is what locates it: a flight belongs to its
       // destination, and everything else has only the one place.
       const place = toPlace;
+      // The departure end of a journey, which used to be read for its time
+      // zone and then thrown away.
+      const origin =
+        isJourney && fromPlace
+          ? { name: fromPlace.name, city: fromPlace.name, timeZone: fromPlace.timeZone }
+          : undefined;
+
       const read = mapsUrl ? parseMapsUrl(mapsUrl) : null;
       const location =
         place || address || phone || mapsUrl
@@ -299,6 +323,7 @@ export function ItemFormScreen() {
         ...(confirmation ? { confirmationNumber: confirmation } : {}),
         ...(notes ? { notes } : {}),
         ...(location ? { location } : {}),
+        ...(origin ? { origin } : {}),
       };
 
       if (itemId) await sync.updateItem(folderId, itemId, patch);

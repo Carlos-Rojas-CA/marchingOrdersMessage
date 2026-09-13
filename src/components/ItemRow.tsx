@@ -42,10 +42,22 @@ export function ItemRow({
   // when they pasted one.
   const mapLink = place ? mapsLinkFor(place, devicePlatform()) : null;
 
-  // A placeholder stay names itself after its city, so the location line under
-  // it would otherwise say the same words twice.
+  /*
+   * A journey reads as both of its ends. "Positano → Naples" then
+   * "Naples → Florence" makes a connection obvious at a glance, where two
+   * lines each naming only their destination does not.
+   *
+   * A placeholder stay names itself after its city, so the location line under
+   * it would otherwise repeat the title word for word.
+   */
+  const from = item.origin?.city ?? item.origin?.name;
+  const to = place?.city ?? place?.name;
   const placeLine =
-    place && place.name !== item.title ? (place.address ?? place.name) : place?.address;
+    from && to
+      ? `${from} → ${to}`
+      : place && place.name !== item.title
+        ? (place.address ?? place.name)
+        : place?.address;
 
   return (
     <div

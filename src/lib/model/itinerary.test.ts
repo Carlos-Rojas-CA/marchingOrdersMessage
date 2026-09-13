@@ -105,3 +105,34 @@ describe('location details', () => {
     expect(doc.items[0]!.location!.phone).toBe('+81-3-5604-9846');
   });
 });
+
+describe('where a journey starts', () => {
+  test('keeps the place it departs from, not only where it lands', () => {
+    const doc = parseItinerary({
+      ...validDoc(),
+      items: [
+        {
+          id: 'f',
+          type: 'flight',
+          title: 'UA 123',
+          origin: { name: 'San Diego', city: 'San Diego', timeZone: 'America/Los_Angeles' },
+          location: { name: 'Naples', city: 'Naples', timeZone: 'Europe/Rome' },
+        },
+      ],
+    });
+
+    // A journey has two ends. Storing only the destination lost half of what
+    // was typed, and left a flight reading as though it began nowhere.
+    expect(doc.items[0]!.origin?.city).toBe('San Diego');
+    expect(doc.items[0]!.location?.city).toBe('Naples');
+  });
+
+  test('is optional, since most things happen in one place', () => {
+    const doc = parseItinerary({
+      ...validDoc(),
+      items: [{ id: 'a', type: 'activity', title: 'Museum' }],
+    });
+
+    expect(doc.items[0]!.origin).toBeUndefined();
+  });
+});

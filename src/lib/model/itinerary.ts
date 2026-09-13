@@ -113,6 +113,14 @@ const itemSchema = z.looseObject({
   confirmationNumber: z.string().optional(),
   notes: z.string().optional(),
   location: locationSchema.optional(),
+  /**
+   * Where a journey starts. Absent for everything that happens in one place.
+   *
+   * A flight has two ends and storing only the destination threw away half of
+   * what was entered — including the departure zone, which is the one thing a
+   * flight genuinely needs two of.
+   */
+  origin: locationSchema.optional(),
   attachments: z.array(attachmentSchema).default([]),
   updatedAt: z.string().optional(),
   updatedBy: z.string().optional(),

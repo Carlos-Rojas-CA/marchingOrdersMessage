@@ -33,6 +33,7 @@ async function renderAt(path: string, items: unknown[] = []) {
           <Route path="/trip/:folderId/route" element={<RouteScreen />} />
           <Route path="/trip/:folderId/legs" element={<LegsScreen />} />
           <Route path="/trip/:folderId/item/new" element={<ItemFormScreen />} />
+          <Route path="/trip/:folderId/item/:itemId" element={<ItemFormScreen />} />
         </Routes>
       </MemoryRouter>
     </ServicesProvider>,
@@ -684,5 +685,86 @@ describe('the suggestion list', () => {
     // keyboard was getting in the way of.
     await user.click(await screen.findByRole('button', { name: /^Naples/ }));
     expect(await screen.findByRole('button', { name: /Naples/ })).toBeInTheDocument();
+  });
+});
+
+describe('two legs in one day', () => {
+  // Positano → ferry → Naples → train → Florence, all on the 20th.
+  const connecting = [
+    stay('Positano', '2026-05-18', '2026-05-20'),
+    {
+      id: 'ferry',
+      type: 'ferry',
+      title: 'Ferry',
+      startsAt: '2026-05-20T09:00:00+02:00',
+      origin: { name: 'Positano', city: 'Positano', timeZone: 'Europe/Rome' },
+      location: { name: 'Naples', city: 'Naples', timeZone: 'Europe/Rome' },
+    },
+    {
+      id: 'train',
+      type: 'train',
+      title: 'Frecciarossa 9512',
+      startsAt: '2026-05-20T13:30:00+02:00',
+      origin: { name: 'Naples', city: 'Naples', timeZone: 'Europe/Rome' },
+      location: { name: 'Florence', city: 'Florence', timeZone: 'Europe/Rome' },
+    },
+    stay('Florence', '2026-05-20', '2026-05-24'),
+  ];
+
+  test('raises no travel warning, because the day is already covered', async () => {
+    await renderAt(`/trip/${FOLDER}/legs`, connecting);
+
+    // Two hops rather than one still moves you, and the app must not ask for a
+    // third thing it already has. Bed gaps at the ends of this fixture's trip
+    // are a separate matter and deliberately not asserted here.
+    await screen.findByText('Positano');
+    expect(screen.queryByText(/nothing booked to get you there/)).not.toBeInTheDocument();
+  });
+
+  test('shows both legs, each naming where it starts and ends', async () => {
+    await renderAt(`/trip/${FOLDER}/item/ferry?type=ferry`, connecting);
+
+    // Reopening the ferry shows the departure that used to be discarded.
+    expect(await screen.findByLabelText('Sails from')).toBeInTheDocument();
+    expect(await screen.findByText('Positano')).toBeInTheDocument();
+  });
+});
+
+describe('a journey keeps both of its ends', () => {
+  test('saves the place it departs from', async () => {
+    const { itinerary } = await renderAt(`/trip/${FOLDER}/item/new?type=flight`);
+    const user = userEvent.setup();
+
+    await user.type(await screen.findByLabelText('Flight number'), 'UA 123');
+    await user.type(screen.getByLabelText('Departs from'), 'San Diego');
+    await user.click(await screen.findByRole('button', { name: /San Diego/ }));
+    await user.type(screen.getByLabelText('Arrives at'), 'Naples');
+    await user.click(await screen.findByRole('button', { name: /^Naples/ }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(async () => {
+      const [item] = (await itinerary()).items;
+      // Read for its time zone and then discarded, which left a flight
+      // reading as though it began nowhere.
+      expect(item.origin.city).toBe('San Diego');
+      expect(item.location.city).toBe('Naples');
+    });
+  });
+
+  test('brings a typed place back when the item is reopened', async () => {
+    // Positano is in no list of cities, so looking it up again found nothing.
+    await renderAt(`/trip/${FOLDER}/item/ferry?type=ferry`, [
+      {
+        id: 'ferry',
+        type: 'ferry',
+        title: 'Ferry',
+        startsAt: '2026-05-20T09:00:00+02:00',
+        origin: { name: 'Positano', city: 'Positano', timeZone: 'Europe/Rome' },
+        location: { name: 'Naples', city: 'Naples', timeZone: 'Europe/Rome' },
+      },
+    ]);
+
+    expect(await screen.findByText('Positano')).toBeInTheDocument();
+    expect(screen.getByText('Naples')).toBeInTheDocument();
   });
 });
