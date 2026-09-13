@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { ServicesProvider, useOnlineTracking, useServices } from './hooks/useServices';
 import type { DriveClient } from './lib/drive/types';
@@ -8,10 +8,30 @@ import { NowScreen } from './routes/NowScreen';
 import { TimelineScreen } from './routes/TimelineScreen';
 import { DocumentsScreen } from './routes/DocumentsScreen';
 import { DocumentViewerScreen } from './routes/DocumentViewerScreen';
-import { ImportScreen } from './routes/ImportScreen';
-import { RouteScreen } from './routes/RouteScreen';
-import { LegsScreen } from './routes/LegsScreen';
-import { ItemFormScreen } from './routes/ItemFormScreen';
+
+/*
+ * The builder is loaded on demand.
+ *
+ * Planning a trip and carrying one are different occasions: the forms, the
+ * route sketch and the leg warnings are only ever reached from inside a trip,
+ * and never at all on the journey the app exists for. Paying for them in the
+ * first download made opening a boarding pass slower to fund a screen that is
+ * not being opened.
+ *
+ * The viewer stays eager on purpose — see below.
+ */
+const RouteScreen = lazy(() =>
+  import('./routes/RouteScreen').then((m) => ({ default: m.RouteScreen })),
+);
+const LegsScreen = lazy(() =>
+  import('./routes/LegsScreen').then((m) => ({ default: m.LegsScreen })),
+);
+const ItemFormScreen = lazy(() =>
+  import('./routes/ItemFormScreen').then((m) => ({ default: m.ItemFormScreen })),
+);
+const ImportScreen = lazy(() =>
+  import('./routes/ImportScreen').then((m) => ({ default: m.ImportScreen })),
+);
 
 function Splash() {
   return (
@@ -40,29 +60,35 @@ function Router() {
   useOnlineTracking();
 
   return (
-    <Routes>
-      <Route path="/" element={<TripsScreen />} />
+    <Suspense fallback={<Splash />}>
+      <Routes>
+        <Route path="/" element={<TripsScreen />} />
 
-      {/* The viewer sits outside TripShell: it takes the whole screen, with no
-          tab bar competing for space or for taps. */}
-      <Route path="/trip/:folderId/doc/:fileId" element={<DocumentViewerScreen />} />
-      <Route path="/trip/:folderId/import" element={<ImportScreen />} />
+        {/* The viewer sits outside TripShell: it takes the whole screen, with no
+            tab bar competing for space or for taps.
 
-      {/* Builder screens stand alone: each is a focused task, and the tab bar
-          would compete for both space and attention. */}
-      <Route path="/trip/:folderId/route" element={<RouteScreen />} />
-      <Route path="/trip/:folderId/legs" element={<LegsScreen />} />
-      <Route path="/trip/:folderId/item/new" element={<ItemFormScreen />} />
-      <Route path="/trip/:folderId/item/:itemId" element={<ItemFormScreen />} />
+            It is also deliberately not lazy. It is the one screen that has to
+            open at a gate, on a dead connection, and a chunk that was never
+            fetched while online is a chunk that is not there. */}
+        <Route path="/trip/:folderId/doc/:fileId" element={<DocumentViewerScreen />} />
+        <Route path="/trip/:folderId/import" element={<ImportScreen />} />
 
-      <Route path="/trip/:folderId" element={<TripShell />}>
-        <Route index element={<NowScreen />} />
-        <Route path="timeline" element={<TimelineScreen />} />
-        <Route path="documents" element={<DocumentsScreen />} />
-      </Route>
+        {/* Builder screens stand alone: each is a focused task, and the tab bar
+            would compete for both space and attention. */}
+        <Route path="/trip/:folderId/route" element={<RouteScreen />} />
+        <Route path="/trip/:folderId/legs" element={<LegsScreen />} />
+        <Route path="/trip/:folderId/item/new" element={<ItemFormScreen />} />
+        <Route path="/trip/:folderId/item/:itemId" element={<ItemFormScreen />} />
 
-      <Route path="*" element={<TripsScreen />} />
-    </Routes>
+        <Route path="/trip/:folderId" element={<TripShell />}>
+          <Route index element={<NowScreen />} />
+          <Route path="timeline" element={<TimelineScreen />} />
+          <Route path="documents" element={<DocumentsScreen />} />
+        </Route>
+
+        <Route path="*" element={<TripsScreen />} />
+      </Routes>
+    </Suspense>
   );
 }
 

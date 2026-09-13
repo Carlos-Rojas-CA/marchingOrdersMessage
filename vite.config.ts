@@ -25,6 +25,12 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('pdfjs-dist')) return 'pdf-viewer';
+          // One chunk for the whole builder rather than four: they are always
+          // entered together, and four round trips to open a form is worse
+          // than one slightly larger file.
+          if (/routes\/(RouteScreen|LegsScreen|ItemFormScreen|ImportScreen)/.test(id)) {
+            return 'builder';
+          }
         },
       },
     },

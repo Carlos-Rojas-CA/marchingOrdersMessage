@@ -8,7 +8,12 @@ import { join } from 'node:path';
  * Only the entry chunk counts: the PDF renderer is deliberately lazy and must
  * not be charged against the cost of opening the app.
  */
-const BUDGET_KB = 150;
+/*
+ * Tightened once the builder moved to its own chunk. A ceiling you are at half
+ * of stops catching anything: the point is to notice the next regression, not
+ * to be reassured by a number nothing can reach.
+ */
+const BUDGET_KB = 95;
 const dir = 'dist/assets';
 
 const entry = readdirSync(dir).filter(
