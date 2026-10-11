@@ -19,8 +19,8 @@
     "url": "git+https://github.com/Carlos-Rojas-CA/MarchingOrdersMessage.git"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Carlos Rojas",
+  "license": "MIT",
   "type": "module",
   "bugs": {
     "url": "https://github.com/Carlos-Rojas-CA/MarchingOrdersMessage/issues"

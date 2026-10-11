@@ -161,3 +161,7 @@ for an eventual native app.
 [`docs/superpowers/specs/2026-09-12-trip-itinerary-design.md`](docs/superpowers/specs/2026-09-12-trip-itinerary-design.md)
 carries the full reasoning, including the open question about how `drive.file`
 grants behave for folders shared with collaborators.
+
+## License
+
+[MIT](LICENSE) © 2026 Carlos Rojas
